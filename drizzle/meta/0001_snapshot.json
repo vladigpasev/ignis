@@ -1,0 +1,128 @@
+{
+  "id": "a4f9f4c2-5b3a-4c8e-bb8a-1a2b3c4d5e6f",
+  "prevId": "35d35b16-5682-49eb-b22b-72cf0ce25694",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "user_id": { "name": "user_id", "type": "integer", "primaryKey": false, "notNull": true },
+        "session_token": { "name": "session_token", "type": "text", "primaryKey": false, "notNull": true },
+        "created_at": { "name": "created_at", "type": "timestamp with time zone", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {
+        "sessions_token_unique": {
+          "name": "sessions_token_unique",
+          "columns": [{ "expression": "session_token", "isExpression": false, "asc": true, "nulls": "last" }],
+          "isUnique": true, "concurrently": false, "method": "btree", "with": {}
+        },
+        "sessions_user_id_idx": {
+          "name": "sessions_user_id_idx",
+          "columns": [{ "expression": "user_id", "isExpression": false, "asc": true, "nulls": "last" }],
+          "isUnique": false, "concurrently": false, "method": "btree", "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "email": { "name": "email", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "name": { "name": "name", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp with time zone", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp with time zone", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [{ "expression": "email", "isExpression": false, "asc": true, "nulls": "last" }],
+          "isUnique": true, "concurrently": false, "method": "btree", "with": {}
+        },
+        "users_created_at_idx": {
+          "name": "users_created_at_idx",
+          "columns": [{ "expression": "created_at", "isExpression": false, "asc": true, "nulls": "last" }],
+          "isUnique": false, "concurrently": false, "method": "btree", "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fires": {
+      "name": "fires",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "lat": { "name": "lat", "type": "double precision", "primaryKey": false, "notNull": true },
+        "lng": { "name": "lng", "type": "double precision", "primaryKey": false, "notNull": true },
+        "radius_m": { "name": "radius_m", "type": "integer", "primaryKey": false, "notNull": true },
+        "status": { "name": "status", "type": "varchar(16)", "primaryKey": false, "notNull": true, "default": "'active'" },
+        "created_by": { "name": "created_by", "type": "integer", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp with time zone", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp with time zone", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {
+        "fires_created_at_idx": {
+          "name": "fires_created_at_idx",
+          "columns": [{ "expression": "created_at", "isExpression": false, "asc": true, "nulls": "last" }],
+          "isUnique": false, "concurrently": false, "method": "btree", "with": {}
+        },
+        "fires_coords_idx": {
+          "name": "fires_coords_idx",
+          "columns": [
+            { "expression": "lat", "isExpression": false, "asc": true, "nulls": "last" },
+            { "expression": "lng", "isExpression": false, "asc": true, "nulls": "last" }
+          ],
+          "isUnique": false, "concurrently": false, "method": "btree", "with": {}
+        }
+      },
+      "foreignKeys": {
+        "fires_created_by_users_id_fk": {
+          "name": "fires_created_by_users_id_fk",
+          "tableFrom": "fires",
+          "tableTo": "users",
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": { "columns": {}, "schemas": {}, "tables": {} }
+}
+

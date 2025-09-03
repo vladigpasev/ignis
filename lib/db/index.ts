@@ -7,7 +7,6 @@ if (!DATABASE_URL) {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __drizzleDb__: ReturnType<typeof drizzle> | undefined;
 }
 
@@ -15,4 +14,3 @@ export const db = globalThis.__drizzleDb__ ?? drizzle(DATABASE_URL, { schema });
 if (process.env.NODE_ENV !== 'production') globalThis.__drizzleDb__ = db;
 
 export type DB = typeof db;
-

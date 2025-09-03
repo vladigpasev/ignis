@@ -7,6 +7,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  doublePrecision,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -29,10 +30,6 @@ export const users = pgTable(
   }),
 );
 
-export const usersRelations = relations(users, ({ many }) => ({
-  sessions: many(sessions),
-}));
-
 export const sessions = pgTable(
   'sessions',
   {
@@ -51,6 +48,11 @@ export const sessions = pgTable(
   }),
 );
 
+export const usersRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  fires: many(fires), // свързваме fires->users по-долу
+}));
+
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, {
     fields: [sessions.userId],
@@ -58,3 +60,39 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   }),
 }));
 
+// ---------- NEW: Fires ----------
+export const fires = pgTable(
+  'fires',
+  {
+    id: serial('id').primaryKey(),
+    lat: doublePrecision('lat').notNull(),
+    lng: doublePrecision('lng').notNull(),
+    radiusM: integer('radius_m').notNull(),
+    status: varchar('status', { length: 16 }).notNull().default('active'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    createdAtIdx: index('fires_created_at_idx').on(t.createdAt),
+    coordsIdx: index('fires_coords_idx').on(t.lat, t.lng),
+  })
+);
+
+export const firesRelations = relations(fires, ({ one }) => ({
+  creator: one(users, {
+    fields: [fires.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export type Fire = {
+  id: number;
+  lat: number;
+  lng: number;
+  radiusM: number;
+  status: string;
+  createdBy: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
