@@ -3,6 +3,8 @@
 import { metersToReadable } from "@/lib/geo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import { useMap } from "@/context/map-context";
 
 export type FireListItem = {
@@ -13,6 +15,8 @@ export type FireListItem = {
   status: string;
   createdAt: string;
   distanceM?: number;
+  volunteersConfirmed?: number;
+  volunteersRequested?: number;
 };
 
 function timeAgo(dateStr: string) {
@@ -58,6 +62,14 @@ export default function FireList({
                   </>
                 )}
               </div>
+              <div className="mt-2 flex items-center gap-2">
+                {typeof f.volunteersConfirmed === "number" && (
+                  <Badge variant="secondary">Потвърдени: {f.volunteersConfirmed}</Badge>
+                )}
+                {typeof f.volunteersRequested === "number" && (
+                  <Badge variant="outline">Заявили: {f.volunteersRequested}</Badge>
+                )}
+              </div>
               <div className="mt-3 flex gap-2">
                 <Button
                   variant="outline"
@@ -71,6 +83,9 @@ export default function FireList({
                 >
                   Фокусирай на картата
                 </Button>
+                <Link href={`/fires/${f.id}`}>
+                  <Button size="sm">Детайли</Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -82,4 +97,3 @@ export default function FireList({
     </div>
   );
 }
-

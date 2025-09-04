@@ -2,6 +2,8 @@
 
 import Popup from "@/components/map/map-popup";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import { metersToReadable } from "@/lib/geo";
 import { Navigation } from "lucide-react";
 
@@ -12,9 +14,11 @@ type Props = {
   radiusM: number;
   createdAt: string | Date;
   onClose?: () => void;
+  volunteersConfirmed?: number;
+  volunteersRequested?: number;
 };
 
-export default function FirePopup({ id, lat, lng, radiusM, createdAt, onClose }: Props) {
+export default function FirePopup({ id, lat, lng, radiusM, createdAt, onClose, volunteersConfirmed, volunteersRequested }: Props) {
   const created = new Date(createdAt);
   return (
     <Popup latitude={lat} longitude={lng} onClose={onClose} offset={15} closeButton className="fire-popup">
@@ -26,6 +30,16 @@ export default function FirePopup({ id, lat, lng, radiusM, createdAt, onClose }:
         <p className="text-xs text-muted-foreground mt-1">
           ID: {id} • {created.toLocaleString()}
         </p>
+        {(typeof volunteersConfirmed === 'number' || typeof volunteersRequested === 'number') && (
+          <div className="mt-2 flex items-center gap-2">
+            {typeof volunteersConfirmed === 'number' && (
+              <Badge variant="secondary">Потвърдени: {volunteersConfirmed}</Badge>
+            )}
+            {typeof volunteersRequested === 'number' && (
+              <Badge variant="outline">Заявили: {volunteersRequested}</Badge>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 mt-3">
           <Button
@@ -38,9 +52,11 @@ export default function FirePopup({ id, lat, lng, radiusM, createdAt, onClose }:
             <Navigation className="h-4 w-4 mr-1.5" />
             Навигация
           </Button>
+          <Link href={`/fires/${id}`}>
+            <Button size="sm">Детайли</Button>
+          </Link>
         </div>
       </div>
     </Popup>
   );
 }
-

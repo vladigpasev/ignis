@@ -20,10 +20,10 @@ const STYLE_OPTIONS: StyleOption[] = [
   { id: "dark-v11", label: "Dark", icon: <MoonIcon className="w-5 h-5" /> },
 ];
 
-export default function MapStyles() {
+export default function MapStyles({ initialStyle = "streets-v12" }: { initialStyle?: string }) {
   const { map } = useMap();
   const { setTheme } = useTheme();
-  const [activeStyle, setActiveStyle] = useState("streets-v12");
+  const [activeStyle, setActiveStyle] = useState(initialStyle);
 
   const handleChange = (value: string) => {
     if (!map) return;
@@ -54,4 +54,3 @@ export default function MapStyles() {
     </aside>
   );
 }
-

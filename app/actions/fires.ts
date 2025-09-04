@@ -2,34 +2,115 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { fires } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { fires, users, fireVolunteers, fireJoinTokens, type Fire } from "@/lib/db/schema";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
+import crypto from "crypto";
+
+// ---------- helpers ----------
+async function ensureLocalUser() {
+  const session = await auth0.getSession();
+  const u = session?.user;
+  if (!u) throw new Error("Unauthorized");
+
+  const email = u.email!;
+  const name = u.name ?? null;
+
+  const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (existing.length > 0) {
+    const row = existing[0];
+    if (name && row.name !== name) {
+      await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, row.id));
+    }
+    return { session: u, local: row };
+  }
+
+  const [created] = await db.insert(users).values({ email, name }).returning();
+  return { session: u, local: created };
+}
+
+async function requireConfirmedVolunteer(fireId: number, userId: number) {
+  const row = await db
+    .select()
+    .from(fireVolunteers)
+    .where(and(eq(fireVolunteers.fireId, fireId), eq(fireVolunteers.userId, userId), eq(fireVolunteers.status, "confirmed")))
+    .limit(1);
+  if (row.length === 0) throw new Error("Forbidden");
+}
 
 export async function listFires(limit = 500) {
   const max = Math.min(Math.max(limit, 1), 2000);
-
   async function run() {
-    return await db
-      .select()
-      .from(fires)
-      .orderBy(desc(fires.createdAt))
-      .limit(max);
+    const rows = await db.select().from(fires).orderBy(desc(fires.createdAt)).limit(max);
+    // attach volunteer counts per fire
+    const counts = await db
+      .select({
+        fireId: fireVolunteers.fireId,
+        confirmed: sql<number>`sum(case when ${fireVolunteers.status} = 'confirmed' then 1 else 0 end)`,
+        requested: sql<number>`sum(case when ${fireVolunteers.status} = 'requested' then 1 else 0 end)`,
+      })
+      .from(fireVolunteers)
+      .groupBy(fireVolunteers.fireId);
+    const byId = new Map<number, { confirmed: number; requested: number }>();
+    for (const c of counts) byId.set(c.fireId, { confirmed: Number(c.confirmed ?? 0), requested: Number(c.requested ?? 0) });
+    return rows.map((r) => ({
+      ...r,
+      volunteersConfirmed: byId.get(r.id)?.confirmed ?? 0,
+      volunteersRequested: byId.get(r.id)?.requested ?? 0,
+    }));
   }
-
-  // transient retry once to mitigate occasional first-load failures
   try {
     return await run();
-  } catch (e) {
+  } catch {
     await new Promise((r) => setTimeout(r, 300));
     return await run();
   }
 }
 
-export async function createFire(form: FormData) {
+export async function getFireById(id: number) {
+  const rows = await db.select().from(fires).where(eq(fires.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+// ----- Volunteers listing -----
+export async function volunteersForFire(fireId: number) {
+  const rows = await db
+    .select({
+      id: fireVolunteers.id,
+      userId: fireVolunteers.userId,
+      status: fireVolunteers.status,
+      createdAt: fireVolunteers.createdAt,
+      name: users.name,
+      email: users.email,
+    })
+    .from(fireVolunteers)
+    .leftJoin(users, eq(fireVolunteers.userId, users.id))
+    .where(eq(fireVolunteers.fireId, fireId))
+    .orderBy(desc(fireVolunteers.createdAt));
+
+  const confirmed = rows.filter((r) => r.status === "confirmed");
+  const requested = rows.filter((r) => r.status === "requested");
+  return { confirmed, requested };
+}
+
+export async function myVolunteerStatus(fireId: number): Promise<"none" | "requested" | "confirmed"> {
   const session = await auth0.getSession();
-  const user = session?.user;
-  if (!user) throw new Error("Unauthorized");
+  const u = session?.user;
+  if (!u?.email) return "none";
+  const local = (await db.select().from(users).where(eq(users.email, u.email)).limit(1))[0];
+  if (!local) return "none";
+  const row = await db
+    .select({ status: fireVolunteers.status })
+    .from(fireVolunteers)
+    .where(and(eq(fireVolunteers.fireId, fireId), eq(fireVolunteers.userId, local.id)))
+    .limit(1);
+  if (!row[0]) return "none";
+  return row[0].status as any;
+}
+
+// ----- Create Fire (creator -> confirmed volunteer) -----
+export async function createFire(form: FormData) {
+  const { local } = await ensureLocalUser();
 
   const lat = Number(form.get("lat"));
   const lng = Number(form.get("lng"));
@@ -49,13 +130,138 @@ export async function createFire(form: FormData) {
     throw new Error("Invalid payload");
   }
 
-  await db.insert(fires).values({
-    lat,
-    lng,
-    radiusM,
-    status: "active",
-    createdBy: null,
+  const [created] = await db
+    .insert(fires)
+    .values({
+      lat,
+      lng,
+      radiusM,
+      status: "active",
+      createdBy: local.id,
+    })
+    .returning();
+
+  // creator becomes confirmed volunteer
+  await db
+    .insert(fireVolunteers)
+    .values({
+      fireId: created.id,
+      userId: local.id,
+      status: "confirmed",
+    })
+    .onConflictDoUpdate({
+      target: [fireVolunteers.fireId, fireVolunteers.userId],
+      set: { status: "confirmed", updatedAt: new Date() },
+    });
+
+  revalidatePath("/fires");
+  revalidatePath(`/fires/${created.id}`);
+}
+
+// ----- Claim volunteer (requested) -----
+export async function claimVolunteer(form: FormData) {
+  const { local } = await ensureLocalUser();
+  const fireId = Number(form.get("fireId"));
+  if (!Number.isFinite(fireId)) throw new Error("Invalid fireId");
+
+  const existing = await db
+    .select()
+    .from(fireVolunteers)
+    .where(and(eq(fireVolunteers.fireId, fireId), eq(fireVolunteers.userId, local.id)))
+    .limit(1);
+
+  if (existing.length === 0) {
+    await db.insert(fireVolunteers).values({ fireId, userId: local.id, status: "requested" });
+  } else if (existing[0].status !== "confirmed") {
+    // keep requested; if already confirmed, no change
+  }
+
+  revalidatePath(`/fires/${fireId}`);
+  return { ok: true };
+}
+
+// ----- Approve another user (make confirmed) -----
+export async function approveVolunteer(form: FormData) {
+  const { local } = await ensureLocalUser();
+  const fireId = Number(form.get("fireId"));
+  const userId = Number(form.get("userId"));
+  if (!Number.isFinite(fireId) || !Number.isFinite(userId)) throw new Error("Invalid payload");
+
+  // Only confirmed volunteers can approve
+  await requireConfirmedVolunteer(fireId, local.id);
+
+  // Upsert -> confirmed
+  await db
+    .insert(fireVolunteers)
+    .values({
+      fireId,
+      userId,
+      status: "confirmed",
+    })
+    .onConflictDoUpdate({
+      target: [fireVolunteers.fireId, fireVolunteers.userId],
+      set: { status: "confirmed", updatedAt: new Date() },
+    });
+
+  revalidatePath(`/fires/${fireId}`);
+  return { ok: true };
+}
+
+// ----- Generate join token (for QR) -----
+export async function generateJoinToken(form: FormData) {
+  const { local } = await ensureLocalUser();
+  const fireId = Number(form.get("fireId"));
+  if (!Number.isFinite(fireId)) throw new Error("Invalid fireId");
+
+  await requireConfirmedVolunteer(fireId, local.id);
+
+  const token = crypto.randomBytes(16).toString("base64url");
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 48); // 48h
+
+  await db.insert(fireJoinTokens).values({
+    fireId,
+    token,
+    createdBy: local.id,
+    expiresAt,
   });
 
-  revalidatePath("/");
+  return { ok: true, token, expiresAt: expiresAt.toISOString() };
+}
+
+// ----- Join with token (QR scan flow) -----
+export async function joinWithToken(fireId: number, token: string) {
+  if (!token || !Number.isFinite(fireId)) return { ok: false, error: "Invalid token." };
+
+  const { local } = await ensureLocalUser();
+
+  const now = new Date();
+  const rows = await db
+    .select()
+    .from(fireJoinTokens)
+    .where(
+      and(
+        eq(fireJoinTokens.fireId, fireId),
+        eq(fireJoinTokens.token, token),
+        isNull(fireJoinTokens.revokedAt),
+        gt(fireJoinTokens.expiresAt, now),
+      ),
+    )
+    .limit(1);
+
+  if (rows.length === 0) {
+    return { ok: false, error: "Невалиден или изтекъл токен." };
+  }
+
+  await db
+    .insert(fireVolunteers)
+    .values({
+      fireId,
+      userId: local.id,
+      status: "confirmed",
+    })
+    .onConflictDoUpdate({
+      target: [fireVolunteers.fireId, fireVolunteers.userId],
+      set: { status: "confirmed", updatedAt: new Date() },
+    });
+  return { ok: true };
 }

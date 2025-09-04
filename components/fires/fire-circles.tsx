@@ -13,6 +13,8 @@ export type FireItem = {
   createdAt: string;
   updatedAt: string;
   distanceM?: number;
+  volunteersConfirmed?: number;
+  volunteersRequested?: number;
 };
 
 const SRC_ID = "fires-polygons-src";

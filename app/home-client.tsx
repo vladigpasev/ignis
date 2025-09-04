@@ -119,6 +119,8 @@ export default function HomeClient({
               lng={selected.lng}
               radiusM={selected.radiusM}
               createdAt={selected.createdAt}
+              volunteersConfirmed={(selected as any).volunteersConfirmed}
+              volunteersRequested={(selected as any).volunteersRequested}
               onClose={() => setSelectedId(null)}
             />
           )}

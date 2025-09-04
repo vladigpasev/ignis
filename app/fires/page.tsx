@@ -4,7 +4,7 @@ import { listFires, createFire } from "@/app/actions/fires";
 export const runtime = "nodejs";
 export const revalidate = 0;
 
-export default async function MapPage() {
+export default async function FiresPage() {
   let rows: any[] = [];
   try {
     rows = await listFires(500);
@@ -20,3 +20,4 @@ export default async function MapPage() {
 
   return <HomeClient initialFires={initialFires as any} createAction={createFire} />;
 }
+

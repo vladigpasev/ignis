@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { fires, type Fire } from "@/lib/db/schema";
+import { fires, type Fire, users, fireVolunteers } from "@/lib/db/schema";
 import { auth0 } from "@/lib/auth0";
 import { eq, desc } from "drizzle-orm";
 import { haversineMeters } from "@/lib/geo";
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   try {
     const session = await auth0.getSession();
     const user = session?.user;
-    if (!user) {
+    if (!user?.email) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
@@ -63,18 +63,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
     }
 
-    // Ако имаме локален mapping между auth0 и users, може да го използваме; иначе оставяме null
-    // Демонстрационно: няма директен user.id тук – оставяме createdBy = null
+    // ensure local user
+    let [local] = await db.select().from(users).where(eq(users.email, user.email)).limit(1);
+    if (!local) {
+      [local] = await db.insert(users).values({ email: user.email, name: user.name ?? null }).returning();
+    }
+
     const [created] = await db
       .insert(fires)
-      .values({
-        lat,
-        lng,
-        radiusM,
-        status: "active",
-        createdBy: null,
-      })
+      .values({ lat, lng, radiusM, status: "active", createdBy: local.id })
       .returning();
+
+    // creator -> confirmed volunteer
+    await db
+      .insert(fireVolunteers)
+      .values({ fireId: created.id, userId: local.id, status: "confirmed" })
+      .onConflictDoUpdate({
+        target: [fireVolunteers.fireId, fireVolunteers.userId],
+        set: { status: "confirmed", updatedAt: new Date() },
+      });
 
     return NextResponse.json({ ok: true, fire: created });
   } catch (e: any) {
@@ -82,4 +89,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || "Server error" }, { status: 500 });
   }
 }
-

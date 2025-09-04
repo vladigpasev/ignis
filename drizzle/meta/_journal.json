@@ -15,6 +15,13 @@
       "when": 1756905500000,
       "tag": "0001_blazing_wildfire",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1757001000000,
+      "tag": "0002_wild_volunteers",
+      "breakpoints": true
     }
   ]
 }
