@@ -24,25 +24,20 @@ export default function Header() {
         <NavigationMenu>
           <NavigationMenuList>
             <NavigationMenuItem>
-              <Link href="#" legacyBehavior passHref>
-                <NavigationMenuLink className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}>
-                  Eleven
-                </NavigationMenuLink>
-              </Link>
+              <NavigationMenuLink asChild className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}>
+                <Link href="#">Eleven</Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href="#" legacyBehavior passHref>
-                <NavigationMenuLink className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}>
-                  Twelve
-                </NavigationMenuLink>
-              </Link>
+              <NavigationMenuLink asChild className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}>
+                <Link href="#">Twelve</Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href="#" legacyBehavior passHref>
-                <NavigationMenuLink className={cn("px-5 py-2 text-gray-700 hover:text-black transition-colors")}>
-                  <AuthNav />
-                </NavigationMenuLink>
-              </Link>
+              {/* Auth navigation renders its own <a> elements; do not nest in Link */}
+              <div className={cn("px-5 py-2")}> 
+                <AuthNav />
+              </div>
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
