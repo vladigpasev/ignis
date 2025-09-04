@@ -39,12 +39,12 @@ export function LocationPopup({ location, onClose }: LocationPopupProps) {
     <Popup latitude={lat} longitude={lng} onClose={onClose} offset={15} closeButton={true} closeOnClick={false} className="location-popup" focusAfterOpen={false}>
       <div className="w-[300px] sm:w-[350px]">
         <div className="flex items-start gap-3">
-          <div className="bg-rose-500/10 p-2 rounded-full shrink-0">{getIcon()}</div>
+          <div className="bg-sky-500/10 p-2 rounded-full shrink-0">{getIcon()}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1">
               <h3 className="font-medium text-base truncate">{name}</h3>
               {status && (
-                <Badge variant={status === "active" ? "outline" : "secondary"} className={cn("text-xs", status === "active" ? "border-green-500 text-green-600" : "")}>
+                <Badge variant={status === "active" ? "outline" : "secondary"} className={cn("text-xs", status === "active" ? "border-blue-500 text-blue-600" : "")}> 
                   {status === "active" ? "Open" : status}
                 </Badge>
               )}
@@ -128,4 +128,3 @@ export function LocationPopup({ location, onClose }: LocationPopupProps) {
     </Popup>
   );
 }
-

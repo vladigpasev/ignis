@@ -1,8 +1,17 @@
 import HomeClient from "@/app/home-client";
 import { listFires, createFire } from "@/app/actions/fires";
 
+export const runtime = "nodejs";
+export const revalidate = 0;
+
 export default async function MapPage() {
-  const rows = await listFires(500);
+  let rows: any[] = [];
+  try {
+    rows = await listFires(500);
+  } catch (e) {
+    console.error("listFires failed:", e);
+    rows = [];
+  }
   const initialFires = rows.map((f) => ({
     ...f,
     createdAt: typeof f.createdAt === "string" ? f.createdAt : new Date(f.createdAt).toISOString(),
@@ -11,4 +20,3 @@ export default async function MapPage() {
 
   return <HomeClient initialFires={initialFires as any} createAction={createFire} />;
 }
-

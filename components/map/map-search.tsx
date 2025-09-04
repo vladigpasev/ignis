@@ -156,8 +156,15 @@ export default function MapSearch() {
         <LocationMarker key={location.properties.mapbox_id} location={location} onHover={(data) => setSelectedLocation(data)} />
       ))}
 
-      {selectedLocation && <LocationPopup location={selectedLocation} onClose={() => setSelectedLocation(null)} />}
+      {selectedLocation && (
+        <LocationPopup
+          location={selectedLocation}
+          onClose={() => {
+            setSelectedLocation(null);
+            setSelectedLocations([]);
+          }}
+        />
+      )}
     </>
   );
 }
-
