@@ -14,6 +14,8 @@ import ReportFire from "@/components/fires/report-fire";
 import FireList from "@/components/fires/fire-list";
 import { haversineMeters } from "@/lib/geo";
 
+// 🆕 FIRMS
+import FirmsHotspots from "@/components/fires/firms-hotspots";
 type LatLng = { lat: number; lng: number };
 
 export default function HomeClient({
@@ -93,6 +95,15 @@ export default function HomeClient({
           <MapControls />
           <MapStyles />
 
+          {/* 🆕 FIRMS Live layer (жълто/оранжево) */}
+          <FirmsHotspots
+            createAction={createAction}
+            dedupRadiusM={500}
+            days={2}
+            minConfidence={0}
+            activeFires={fires.map((f) => ({ lat: f.lat, lng: f.lng }))}
+          />
+
           {/* Report Fire via server action */}
           <ReportFire action={createAction} />
 
@@ -120,4 +131,3 @@ export default function HomeClient({
     </div>
   );
 }
-

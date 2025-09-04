@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MapContext } from "@/context/map-context";
@@ -25,6 +25,7 @@ export default function MapProvider({
   children,
 }: MapProviderProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [ctxMap, setCtxMap] = useState<mapboxgl.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +57,7 @@ export default function MapProvider({
         });
 
         mapRef.current = map;
+        setCtxMap(map); // <- контекстът се обновява само когато има map инстанция
 
         const onError = (e: any) => {
           console.error("Mapbox error:", e);
@@ -87,6 +89,7 @@ export default function MapProvider({
           mapRef.current.remove();
         } catch {}
         mapRef.current = null;
+        setCtxMap(null);
       }
     };
   }, [
@@ -97,11 +100,12 @@ export default function MapProvider({
     styleUrl,
   ]);
 
+  // стабилизирана стойност за контекста (не създаваме нов обект на всеки ререндер)
+  const contextValue = useMemo(() => ({ map: ctxMap }), [ctxMap]);
+
   return (
     <>
-      <MapContext.Provider value={{ map: mapRef.current }}>
-        {children}
-      </MapContext.Provider>
+      <MapContext.Provider value={contextValue}>{children}</MapContext.Provider>
 
       {!loaded && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-[1000]">
@@ -117,4 +121,3 @@ export default function MapProvider({
     </>
   );
 }
-

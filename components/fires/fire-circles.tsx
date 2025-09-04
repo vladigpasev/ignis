@@ -69,8 +69,8 @@ export default function FireCircles({ fires }: { fires: FireItem[] }) {
             },
           });
         }
-      } catch (e) {
-        // swallow errors during style reloads
+      } catch {
+        // при презареждане на стил може да има транзитни грешки
       }
     };
 
@@ -86,10 +86,8 @@ export default function FireCircles({ fires }: { fires: FireItem[] }) {
 
   useEffect(() => {
     if (!map || !map.isStyleLoaded()) return;
-    // Ъпдейт на данните при промяна (ако източникът вече съществува)
     try {
-      const src = map.getSource(SRC_ID) as any;
-      src?.setData?.(geojson);
+      (map.getSource(SRC_ID) as any)?.setData?.(geojson);
     } catch {}
   }, [map, geojson]);
 

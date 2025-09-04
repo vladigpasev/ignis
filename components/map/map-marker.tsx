@@ -1,7 +1,7 @@
 "use client";
 
-import mapboxgl, { MarkerOptions } from "mapbox-gl";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import mapboxgl from "mapbox-gl";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMap } from "@/context/map-context";
 import { LocationFeature } from "@/lib/mapbox/utils";
@@ -22,7 +22,7 @@ type Props = {
     data: LocationFeature;
   }) => void;
   children?: React.ReactNode;
-} & MarkerOptions;
+};
 
 export default function Marker({
   children,
@@ -31,12 +31,11 @@ export default function Marker({
   data,
   onHover,
   onClick,
-  ...props
 }: Props) {
   const { map } = useMap();
   const markerRef = useRef<mapboxgl.Marker | null>(null);
 
-  // Create container on client only
+  // контейнер за React портала – създаваме го веднъж
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -44,52 +43,89 @@ export default function Marker({
     }
   }, []);
 
+  // стабилни референции към callback-ите (без да ре-създаваме маркера)
+  const hoverRef = useRef<typeof onHover>(undefined);
+  const clickRef = useRef<typeof onClick>(undefined);
+  const dataRef = useRef<LocationFeature>(data);
   useEffect(() => {
-    if (!map) return;
+    hoverRef.current = onHover;
+  }, [onHover]);
+  useEffect(() => {
+    clickRef.current = onClick;
+  }, [onClick]);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
-    const handleEnter = () =>
-      onHover?.({ isHovered: true, position: { longitude, latitude }, marker: markerRef.current!, data });
-    const handleLeave = () =>
-      onHover?.({ isHovered: false, position: { longitude, latitude }, marker: markerRef.current!, data });
-    const handleClick = () => onClick?.({ position: { longitude, latitude }, marker: markerRef.current!, data });
-
+  // добавяне на слушатели към контейнера (веднъж)
+  useEffect(() => {
     if (!container) return;
+    const handleEnter = () => {
+      if (!markerRef.current) return;
+      hoverRef.current?.({
+        isHovered: true,
+        position: { longitude, latitude },
+        marker: markerRef.current,
+        data: dataRef.current,
+      });
+    };
+    const handleLeave = () => {
+      if (!markerRef.current) return;
+      hoverRef.current?.({
+        isHovered: false,
+        position: { longitude, latitude },
+        marker: markerRef.current,
+        data: dataRef.current,
+      });
+    };
+    const handleClick = () => {
+      if (!markerRef.current) return;
+      clickRef.current?.({
+        position: { longitude, latitude },
+        marker: markerRef.current,
+        data: dataRef.current,
+      });
+    };
 
     container.addEventListener("mouseenter", handleEnter);
     container.addEventListener("mouseleave", handleLeave);
     container.addEventListener("click", handleClick);
 
-    const addMarker = () => {
-      try {
-        const marker = new mapboxgl.Marker({ element: container, ...props })
-          .setLngLat([longitude, latitude])
-          .addTo(map);
-        markerRef.current = marker;
-      } catch (e) {
-        // swallow transient errors if map not ready
-      }
+    return () => {
+      container.removeEventListener("mouseenter", handleEnter);
+      container.removeEventListener("mouseleave", handleLeave);
+      container.removeEventListener("click", handleClick);
     };
+    // умишлено НЕ зависим от onHover/onClick/data, защото използваме рефове
+  }, [container, latitude, longitude]);
 
-    if ((map as any).isStyleLoaded?.()) addMarker();
-    map.once("style.load", addMarker as any);
+  // създаваме маркера ВЕДНЪЖ (не ползваме style.load) – маркерите оцеляват при смяна на стил
+  useEffect(() => {
+    if (!map || !container) return;
+    if (markerRef.current) return; // вече е създаден
+
+    try {
+      const marker = new mapboxgl.Marker({ element: container })
+        .setLngLat([longitude, latitude])
+        .addTo(map);
+      markerRef.current = marker;
+    } catch {
+      // ignore
+    }
 
     return () => {
       try {
-        container.removeEventListener("mouseenter", handleEnter);
-        container.removeEventListener("mouseleave", handleLeave);
-        container.removeEventListener("click", handleClick);
-        map.off("style.load", addMarker as any);
         markerRef.current?.remove();
       } catch {}
+      markerRef.current = null;
     };
-  }, [map, longitude, latitude, props, onHover, onClick, data, container]);
+  }, [map, container]); // умишлено НЕ зависим от longitude/latitude
 
-  // Update position if coordinates change without recreating marker
+  // плавно обновяване на позицията, без да унищожаваме маркера
   useEffect(() => {
     markerRef.current?.setLngLat([longitude, latitude]);
   }, [longitude, latitude]);
 
-  // Render React children into the detached container owned by Mapbox
   if (!container) return null;
   return createPortal(children, container);
 }
