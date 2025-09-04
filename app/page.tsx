@@ -1,13 +1,24 @@
-import HomeClient from "@/app/home-client";
-import { listFires, createFire } from "@/app/actions/fires";
+import Header from "./components/header.jsx";
+import Hero from "./components/hero.jsx";
+import Feature from "./components/feature.jsx";
+import CaseStudies from "./components/case.jsx";
+import Testimonials from "./components/testimonials.jsx";
+import ContactForm from "./components/contact.jsx";
+import Footer from "./components/footer.jsx";
 
-export default async function Home() {
-  const rows = await listFires(500);
-  const initialFires = rows.map((f) => ({
-    ...f,
-    createdAt: typeof f.createdAt === "string" ? f.createdAt : new Date(f.createdAt).toISOString(),
-    updatedAt: typeof f.updatedAt === "string" ? f.updatedAt : new Date(f.updatedAt).toISOString(),
-  }));
-
-  return <HomeClient initialFires={initialFires as any} createAction={createFire} />;
+export default function Home() {
+  return (
+    <div>
+      <Header />
+      <div className="max-w-[1280px] mx-auto">
+        <Hero />
+        <Feature />
+        <CaseStudies />
+        <Testimonials />
+        <ContactForm />
+      </div>
+      <Footer />
+    </div>
+  );
 }
+
