@@ -124,6 +124,17 @@
   }
 }
 
+/* Ensure Sendbird UIKit portals render above overlays and are clickable */
+#sendbird-portal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  pointer-events: none;
+}
+#sendbird-portal-root * {
+  pointer-events: auto;
+}
+
 /* ===== Custom Mapbox Popup Styling ===== */
 .mapboxgl-custom-popup .mapboxgl-popup-content {
   @apply bg-card text-card-foreground p-5 rounded-lg;

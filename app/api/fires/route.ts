@@ -4,6 +4,7 @@ import { fires, type Fire, users, fireVolunteers } from "@/lib/db/schema";
 import { auth0 } from "@/lib/auth0";
 import { eq, desc } from "drizzle-orm";
 import { haversineMeters } from "@/lib/geo";
+import { ensureSbUser, getOrCreateFireChannel, joinUserToChannel } from "@/lib/sendbird";
 
 type FireDTO = Fire & { distanceM?: number };
 
@@ -82,6 +83,16 @@ export async function POST(req: Request) {
         target: [fireVolunteers.fireId, fireVolunteers.userId],
         set: { status: "confirmed", updatedAt: new Date() },
       });
+
+    // Auto-join creator into Sendbird channel (best-effort)
+    try {
+      const sbUid = `user-${local.id}`;
+      await ensureSbUser(sbUid, local.name || local.email);
+      const channelUrl = await getOrCreateFireChannel(created.id);
+      await joinUserToChannel(channelUrl, sbUid);
+    } catch (e) {
+      console.warn("[sendbird] auto-join failed on fire create", (e as any)?.message);
+    }
 
     return NextResponse.json({ ok: true, fire: created });
   } catch (e: any) {

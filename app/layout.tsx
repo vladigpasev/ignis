@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@sendbird/uikit-react/dist/index.css";
 import AuthNav from "./components/auth-nav";
 import { ThemeProvider } from "next-themes";
 import { Auth0Provider } from "@auth0/nextjs-auth0";
@@ -34,6 +35,8 @@ export default function RootLayout({
             {children}
           </Auth0Provider>
         </ThemeProvider>
+        {/* Portal root for Sendbird UIKit menus/modals */}
+        <div id="sendbird-portal-root" />
       </body>
     </html>
   );

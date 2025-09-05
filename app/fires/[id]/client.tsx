@@ -15,9 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import ZoneDraw from "@/components/zones/zone-draw";
 import ZoneList from "@/components/zones/zone-list";
 import ZoneShapes from "@/components/zones/zone-shapes";
-import ChatBox from "@/components/chat/chat-box";
+import SendbirdChat from "@/components/chat/sendbird-chat";
 import type mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
+import { useSendbirdUnread } from "@/hooks/useSendbirdUnread";
 
 type Fire = {
   id: number;
@@ -92,6 +93,7 @@ export default function FireDetailsClient({
 
   // chat
   const [chatOpen, setChatOpen] = useState(false);
+  const { count: unreadCount } = useSendbirdUnread(fire.id, chatOpen);
   // local ref to map instance captured on load
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -476,34 +478,45 @@ export default function FireDetailsClient({
         </div>
       </div>
 
-      {/* Floating Chat Button + Panel */}
-      <div className="fixed bottom-4 right-4 z-20">
-        {chatOpen && (
-          <div className="mb-3 w-[min(380px,90vw)] max-h-[70vh] bg-background/95 backdrop-blur border rounded-lg shadow-xl p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium">Общ чат</div>
-              <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <ChatBox
-              fetchUrl={`/api/fires/${fire.id}/chat`}
-              postUrl={`/api/fires/${fire.id}/chat`}
-              canBlock={viewer === "confirmed"}
-              onBlock={async (userId) => {
-                if (!confirm("Блокиране на потребителя от общия чат?")) return;
-                await fetch(`/api/fires/${fire.id}/blocks`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ blockedUserId: userId }),
-                });
-              }}
-            />
+      {/* Floating Chat Panel (fixed, doesn't move the button) */}
+      {chatOpen && (
+        <div className="fixed bottom-24 right-4 z-30 w-[min(380px,90vw)] max-h-[70vh] bg-background/95 backdrop-blur border rounded-lg shadow-xl p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-medium">Общ чат</div>
+            <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        )}
-        <Button size="icon" className="rounded-full h-12 w-12 shadow-lg" onClick={() => setChatOpen((v) => !v)} title="Чат">
-          <MessageCircle className="h-6 w-6" />
-        </Button>
+          <SendbirdChat fireId={fire.id} />
+        </div>
+      )}
+
+      {/* Unread pill (fixed near the button, no layout shift) */}
+      {!chatOpen && unreadCount > 0 && (
+        <div className="fixed bottom-6 right-24 z-30">
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="rounded-full bg-primary text-primary-foreground px-3 py-1.5 shadow-lg hover:opacity-95 transition"
+            title="Отвори чата"
+          >
+            Имаш {unreadCount} непрочетени съобщения
+          </button>
+        </div>
+      )}
+
+      {/* Floating Chat Button (fixed anchor) */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <div className="relative">
+          <Button size="icon" className="rounded-full h-12 w-12 shadow-lg" onClick={() => setChatOpen((v) => !v)} title="Чат">
+            <MessageCircle className="h-6 w-6" />
+          </Button>
+          {unreadCount > 0 && !chatOpen && (
+            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center shadow">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </div>
       </div>
 
       <Dialog open={isQR} onOpenChange={setIsQR}>

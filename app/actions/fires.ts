@@ -6,6 +6,7 @@ import { fires, users, fireVolunteers, fireJoinTokens, fireJoinTokenUses, type F
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
 import crypto from "crypto";
+import { ensureSbUser, getOrCreateFireChannel, joinUserToChannel } from "@/lib/sendbird";
 
 // ---------- helpers ----------
 async function ensureLocalUser() {
@@ -36,6 +37,19 @@ async function requireConfirmedVolunteer(fireId: number, userId: number) {
     .where(and(eq(fireVolunteers.fireId, fireId), eq(fireVolunteers.userId, userId), eq(fireVolunteers.status, "confirmed")))
     .limit(1);
   if (row.length === 0) throw new Error("Forbidden");
+}
+
+async function ensureSendbirdJoined(fireId: number, userId: number) {
+  try {
+    const u = (await db.select().from(users).where(eq(users.id, userId)).limit(1))[0];
+    if (!u) return;
+    const sbUid = `user-${u.id}`;
+    await ensureSbUser(sbUid, u.name || u.email);
+    const channelUrl = await getOrCreateFireChannel(fireId);
+    await joinUserToChannel(channelUrl, sbUid);
+  } catch (e: any) {
+    console.warn("[sendbird] auto-join failed", fireId, userId, e?.message);
+  }
 }
 
 export async function listFires(limit = 500) {
@@ -154,6 +168,9 @@ export async function createFire(form: FormData) {
       set: { status: "confirmed", updatedAt: new Date() },
     });
 
+  // Auto-join creator into Sendbird channel
+  await ensureSendbirdJoined(created.id, local.id);
+
   revalidatePath("/fires");
   revalidatePath(`/fires/${created.id}`);
 }
@@ -207,6 +224,9 @@ export async function approveVolunteer(form: FormData) {
   const { chatBlocks } = await import("@/lib/db/schema");
   const { and, eq } = await import("drizzle-orm");
   await db.delete(chatBlocks).where(and(eq(chatBlocks.fireId, fireId), eq(chatBlocks.blockedUserId, userId)));
+
+  // Auto-join approved user into Sendbird channel
+  await ensureSendbirdJoined(fireId, userId);
 
   revalidatePath(`/fires/${fireId}`);
   return { ok: true };
@@ -280,5 +300,7 @@ export async function joinWithToken(fireId: number, token: string) {
     const { and, eq } = await import("drizzle-orm");
     await db.delete(chatBlocks).where(and(eq(chatBlocks.fireId, fireId), eq(chatBlocks.blockedUserId, local.id)));
   } catch {}
+  // Auto-join into Sendbird channel
+  await ensureSendbirdJoined(fireId, local.id);
   return { ok: true };
 }
