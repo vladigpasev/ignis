@@ -31,7 +31,7 @@ export default function ZoneDraw({
   const { map } = useMap();
 
   // UI/формови полета
-  const [mode, setMode] = useState<"idle" | "polygon">("polygon");
+  const [mode, setMode] = useState<"idle" | "polygon" | "details">("polygon");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   // Mobile detection for adaptive UX
@@ -170,8 +170,8 @@ export default function ZoneDraw({
       } catch {}
     };
 
-    // при idle → чистим, връщаме интеракции
-    if (mode === "idle") {
+    // Активни слушатели и курсор само при истинско рисуване (polygon)
+    if (mode !== "polygon") {
       applyCursor();
       unlockInteractions();
       setHint("");
@@ -181,7 +181,11 @@ export default function ZoneDraw({
     // активен режим → блок интеракции и подсказка
     lockInteractions();
     applyCursor();
-    setHint("Кликвай/тапвай, за да добавяш точки. Двоен клик/Enter за край. Десен клик/Backspace за назад. Esc за отказ.");
+    setHint(
+      isMobile
+        ? "Тапай върху картата, за да добавяш точки и очертаеш зоната. Двоен тап или бутона ‘Готово’ за край."
+        : "Кликвай, за да добавяш точки. Двоен клик/Enter за край. Десен клик/Backspace за назад. Esc за отказ."
+    );
 
     // Интеграция с Mapbox Draw за полигон
     if (mode === "polygon") {
@@ -193,13 +197,28 @@ export default function ZoneDraw({
         }
         const draw = new MapboxDraw({
           displayControlsDefault: false,
-          // Show only trash on desktop (polygon is the only mode and starts directly)
-          controls: isMobile ? {} : { trash: true },
-          defaultMode: "draw_polygon",
+          controls: {},
+          // Стартираме в simple_select; ще превключим към draw_polygon само ако няма предварителни точки
+          defaultMode: "simple_select",
         });
         map.addControl(draw as any, "top-right");
         drawRef.current = draw;
-        try { (draw as any).changeMode && (draw as any).changeMode("draw_polygon"); } catch {}
+        try {
+          const pts = pointsRef.current;
+          if (pts && pts.length >= 3) {
+            const ring = pts.concat([pts[0]]);
+            let fid: any = (draw as any).add({
+              type: "Feature",
+              properties: {},
+              geometry: { type: "Polygon", coordinates: [ring] },
+            });
+            if (Array.isArray(fid)) fid = fid[0];
+            // Веднага включваме редакция на върховете
+            (draw as any).changeMode && (draw as any).changeMode("direct_select", { featureId: fid });
+          } else {
+            (draw as any).changeMode && (draw as any).changeMode("draw_polygon");
+          }
+        } catch {}
 
         const syncFromDraw = () => {
           const data = draw.getAll();
@@ -215,7 +234,11 @@ export default function ZoneDraw({
           const cleaned = ring.slice(0, ring.length > 1 ? ring.length - 1 : ring.length);
           setPoints(cleaned);
         };
-        const onCreate = () => syncFromDraw();
+        const onCreate = () => {
+          syncFromDraw();
+          // На телефон след приключване на полигона → преминаваме към попълване на детайли
+          if (isMobile) setMode("details");
+        };
         const onUpdate = () => syncFromDraw();
         const onDelete = () => {
           setPoints([]);
@@ -334,7 +357,8 @@ export default function ZoneDraw({
     const onDblClick = (_e: mapboxgl.MapMouseEvent) => {
       if (modeRef.current === "polygon" && drawRef.current) return; // Draw поема полигон
       if (modeRef.current === "polygon" && pointsRef.current.length >= 3) {
-        createZone();
+        if (isMobile) setMode("details");
+        else createZone();
       }
     };
 
@@ -344,7 +368,8 @@ export default function ZoneDraw({
       e.preventDefault();
       e.stopPropagation();
       if (modeRef.current === "polygon" && pointsRef.current.length >= 3) {
-        createZone();
+        if (isMobile) setMode("details");
+        else createZone();
       }
     };
 
@@ -433,6 +458,7 @@ export default function ZoneDraw({
               try { map.off("draw.modechange", lst.onModeChange as any); } catch {}
             }
             map.removeControl(drawRef.current as any);
+            drawRef.current = null;
           }
         } catch {}
       } catch {}
@@ -442,7 +468,7 @@ export default function ZoneDraw({
       setHint("");
     };
     return cleanup;
-  }, [map, lockInteractions, unlockInteractions, mode]);
+  }, [map, lockInteractions, unlockInteractions, mode, isMobile]);
 
   // Превю слоеве: ensure + live update + cleanup (изключени, когато е активен MapboxDraw за полигон)
   useEffect(() => {
@@ -542,26 +568,29 @@ export default function ZoneDraw({
 
   const createZone = useCallback(() => {
     if (!map) return;
-    if (modeRef.current === "polygon") {
-      const pts = pointsRef.current;
-      if (pts.length < 3) return alert("Минимум 3 точки.");
-      startTransition(async () => {
-        const res = await fetch(`/api/fires/${fireId}/zones`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            description,
-            geomType: "polygon",
-            polygon: pts,
-          }),
-        }).then((r) => r.json());
-        if (!res?.ok) return alert(res?.error || "Грешка");
-        reset();
-        onCreated?.();
-      });
+    const pts = pointsRef.current;
+    if (!pts || pts.length < 3) return alert("Минимум 3 точки.");
+    // На мобилни: ако още не сме отворили формата за детайли → отвори я
+    if (isMobile && mode !== "details") {
+      setMode("details");
+      return;
     }
-  }, [map, fireId, title, description, onCreated]);
+    startTransition(async () => {
+      const res = await fetch(`/api/fires/${fireId}/zones`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          geomType: "polygon",
+          polygon: pts,
+        }),
+      }).then((r) => r.json());
+      if (!res?.ok) return alert(res?.error || "Грешка");
+      reset();
+      onCreated?.();
+    });
+  }, [map, fireId, title, description, onCreated, isMobile, mode]);
 
   function reset() {
     setMode("idle");
@@ -587,16 +616,32 @@ export default function ZoneDraw({
           </div>
 
           <div className="flex gap-2">
-            {/* При активен Mapbox Draw скриваме локалното "Назад" и изчистваме чрез draw */}
-            {!drawRef.current && (
-              <Button size="sm" variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))} disabled={points.length === 0}>
-                <Undo2 className="h-4 w-4 mr-1" /> Назад
+            {/* Desktop: Undo last point if not using Draw; Mobile details: go back to edit */}
+            {(!drawRef.current || (isMobile && mode === "details")) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (isMobile && mode === "details") {
+                    setMode("polygon");
+                  } else {
+                    setPoints((p) => p.slice(0, -1));
+                  }
+                }}
+                disabled={!isMobile && points.length === 0}
+              >
+                <Undo2 className="h-4 w-4 mr-1" /> {isMobile && mode === "details" ? "Назад към полигона" : "Назад"}
               </Button>
             )}
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
+                if (isMobile && mode === "details") {
+                  setPoints([]);
+                  setMode("polygon");
+                  return;
+                }
                 if (drawRef.current) {
                   try { (drawRef.current as any).deleteAll(); } catch {}
                   try { (drawRef.current as any).changeMode && (drawRef.current as any).changeMode("draw_polygon"); } catch {}
@@ -638,8 +683,8 @@ export default function ZoneDraw({
       {/* Mobile drawing: compact overlay controls, keep map fully usable */}
       {isMobile && mode === "polygon" && (
         <>
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-3 py-2 rounded-full border bg-background/90 backdrop-blur text-xs text-muted-foreground shadow">
-            Точки: {points.length} — двоен тап за край
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-3 py-2 rounded-full border bg-background/90 backdrop-blur text-xs text-muted-foreground shadow max-w-[92vw] text-center">
+            Тапай върху картата, за да добавяш точки и очертаеш зоната. Двоен тап или „Готово“ за край. Точки: {points.length}
           </div>
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100]">
             <div className="flex items-center gap-2 bg-background/95 backdrop-blur px-3 py-2 rounded-full border shadow-lg">
@@ -662,7 +707,14 @@ export default function ZoneDraw({
               >
                 Изчисти
               </Button>
-              <Button size="sm" onClick={createZone} disabled={isPending || points.length < 3}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (points.length < 3) return alert("Минимум 3 точки.");
+                  setMode("details");
+                }}
+                disabled={isPending || points.length < 3}
+              >
                 Готово
               </Button>
               <Button size="sm" variant="outline" onClick={() => { reset(); onClose?.(); }}>

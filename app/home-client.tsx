@@ -82,7 +82,7 @@ export default function HomeClient({
   const selected = selectedId ? fires.find((f) => f.id === selectedId) ?? null : null;
 
   return (
-    <div className="w-screen min-h-screen">
+    <div className="w-full min-h-screen">
       <div className="relative h-[65vh] w-full">
         <div id="map-container" ref={mapContainerRef} className="absolute inset-0 h-full w-full" />
 

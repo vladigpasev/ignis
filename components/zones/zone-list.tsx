@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import ImageUploader from "@/components/uploads/image-uploader";
 import { Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { circlePolygon } from "@/lib/geo";
@@ -203,23 +202,7 @@ export default function ZoneList({
                 )}
               </div>
 
-              {canEdit && (
-                <div className="pt-3 mt-2 border-t">
-                  <div className="text-xs text-muted-foreground mb-1">Галерия — качи снимка (ще стане cover)</div>
-                  <ImageUploader
-                    prefix={`fires/${fireId}/zones/${z.id}/gallery`}
-                    onUploaded={async (f) => {
-                      await fetch(`/api/fires/${fireId}/zones/${z.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ addGalleryImage: { url: f.url, key: f.key } }),
-                      });
-                      await load();
-                      onChange?.();
-                    }}
-                  />
-                </div>
-              )}
+              {false && canEdit && null}
             </CardContent>
           </Card>
         );

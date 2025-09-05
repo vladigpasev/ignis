@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Users, ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { circlePolygon } from "@/lib/geo";
+import ImageUploader from "@/components/uploads/image-uploader";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const STYLE = "satellite-streets-v12";
@@ -45,6 +46,8 @@ export default function ZoneDetailsClient({
     members: { userId: number; name: string | null; email: string; joinedAt: string }[];
     gallery: { id: number; url: string }[];
     updates: { id: number; text: string | null; createdAt: string; userId: number; name: string | null; email: string; images: any[] }[];
+    myZoneId?: number | null;
+    isMember?: boolean;
   };
   canEdit: boolean;
 }) {
@@ -87,6 +90,8 @@ export default function ZoneDetailsClient({
   };
 
   const cover = data.gallery?.[0]?.url || buildStaticMapPreview(z);
+  const isMember = !!data.isMember;
+  const inAnotherZone = data.myZoneId != null && data.myZoneId !== zoneId;
 
   return (
     <div className="max-w-6xl mx-auto w-full px-4 py-6">
@@ -118,21 +123,71 @@ export default function ZoneDetailsClient({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {z.description ? (
-            <p className="text-muted-foreground">{z.description}</p>
-          ) : (
-            <p className="text-muted-foreground italic">Няма описание.</p>
+          {!isMember && (
+            <div className="rounded-md border p-4 bg-muted/30">
+              {inAnotherZone ? (
+                <div className="space-y-3">
+                  <div className="text-sm">В момента сте присъединени към друга зона на този пожар.</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={join} disabled={joining}>
+                      {joining ? "Смяна…" : "Смени зоната и влез тук"}
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <a href={`/fires/${fireId}`}>Назад към пожара</a>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm">Не сте в зона за този пожар. Искате ли да влезете?</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={join} disabled={joining}>
+                      {joining ? "Присъединяване…" : "Влез в зоната"}
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <a href={`/fires/${fireId}`}>Назад към пожара</a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {isMember ? (
+            z.description ? (
+              <p className="text-muted-foreground">{z.description}</p>
+            ) : (
+              <p className="text-muted-foreground italic">Няма описание.</p>
+            )
+          ) : null}
+
+          {isMember && (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={leave} disabled={leaving}>
+                {leaving ? "Излизане…" : "Излез от зона"}
+              </Button>
+            </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={join} disabled={joining}> {joining ? "Присъединяване…" : "Влез в зоната"} </Button>
-            <Button variant="outline" onClick={leave} disabled={leaving}> {leaving ? "Излизане…" : "Излез от зона"} </Button>
-          </div>
+          {isMember && <Separator />}
 
-          <Separator />
-
+          {isMember && (
           <div className="grid gap-3">
             <div className="text-sm font-medium">Галерия</div>
+            {canEdit && (
+              <div className="pb-2">
+                <ImageUploader
+                  prefix={`fires/${fireId}/zones/${zoneId}/gallery`}
+                  onUploaded={async (f) => {
+                    await fetch(`/api/fires/${fireId}/zones/${zoneId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ addGalleryImage: { url: f.url, key: f.key } }),
+                    });
+                    location.reload();
+                  }}
+                />
+              </div>
+            )}
             {data.gallery.length === 0 ? (
               <div className="text-sm text-muted-foreground">Няма снимки.</div>
             ) : (
@@ -144,9 +199,11 @@ export default function ZoneDetailsClient({
               </div>
             )}
           </div>
+          )}
 
-          <Separator />
+          {isMember && <Separator />}
 
+          {isMember && (
           <div className="grid gap-2">
             <div className="text-sm font-medium">Членове</div>
             {data.members.length === 0 ? (
@@ -162,9 +219,11 @@ export default function ZoneDetailsClient({
               </ul>
             )}
           </div>
+          )}
 
-          <Separator />
+          {isMember && <Separator />}
 
+          {isMember && (
           <div className="grid gap-2">
             <div className="text-sm font-medium">Обновления</div>
             {data.updates.length === 0 ? (
@@ -189,9 +248,9 @@ export default function ZoneDetailsClient({
               </ul>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
-

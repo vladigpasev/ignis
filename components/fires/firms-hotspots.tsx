@@ -84,11 +84,18 @@ export default function FirmsHotspots({
         setBboxString(bbox);
       } catch {}
     };
+    // Зареждаме при първоначално зареждане на картата и при движение/зуум
     map.on("moveend", apply);
-    if ((map as any).isStyleLoaded?.()) apply();
+    const onLoad = () => apply();
+    try {
+      map.on("load", onLoad as any);
+    } catch {}
+    // ако стилът вече е зареден – приложи веднага
+    if ((map as any).loaded?.() || (map as any).isStyleLoaded?.()) apply();
     return () => {
       try {
         map.off("moveend", apply);
+        map.off("load", onLoad as any);
       } catch {}
     };
   }, [map]);

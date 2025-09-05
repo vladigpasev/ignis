@@ -17,6 +17,7 @@ import ZoneList from "@/components/zones/zone-list";
 import ZoneShapes from "@/components/zones/zone-shapes";
 import ChatBox from "@/components/chat/chat-box";
 import type mapboxgl from "mapbox-gl";
+import { useRouter } from "next/navigation";
 
 type Fire = {
   id: number;
@@ -71,6 +72,7 @@ export default function FireDetailsClient({
   generateTokenAction: (form: FormData) => Promise<{ ok: boolean; token?: string; expiresAt?: string; error?: string }>;
   joinBaseUrl: string;
 }) {
+  const router = useRouter();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [viewer, setViewer] = useState(viewerStatus);
@@ -196,6 +198,7 @@ export default function FireDetailsClient({
   }, [zonesLoaded, fire.id]);
 
   const canEditZones = viewer === "confirmed";
+  const myZone = useMemo(() => zones.find((z) => z.isMember), [zones]);
 
   // Compute and constrain map view to the fire area (zones + vicinity)
   useEffect(() => {
@@ -274,7 +277,7 @@ export default function FireDetailsClient({
   }, [mapReady, zonesLoaded, zones, fire.id, fire.lat, fire.lng, fire.radiusM]);
 
   return (
-    <div className="w-screen min-h-screen">
+    <div className="w-full min-h-screen">
       <div className="relative h-[65vh] w-full">
         <div id="map-container" ref={mapContainerRef} className="absolute inset-0 h-full w-full" />
 
@@ -294,7 +297,7 @@ export default function FireDetailsClient({
             <FireMarker id={fire.id} lat={fire.lat} lng={fire.lng} />
           )}
 
-          {zones.length > 0 && <ZoneShapes zones={zones as any} />}
+          {zones.length > 0 && <ZoneShapes zones={zones as any} onChange={loadZones} />}
 
           {showZoneCreator && canEditZones && (
             <div className="absolute top-4 left-4 z-10">
@@ -325,8 +328,22 @@ export default function FireDetailsClient({
       </div>
 
       <div className="max-w-6xl mx-auto w-full px-4 py-6">
-        <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-          <Card>
+        {myZone && (
+          <div className="mb-6">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto h-12 text-base sm:text-lg px-6 rounded-xl shadow-lg hover:shadow-xl"
+              onClick={() => router.push(`/fires/${fire.id}/zones/${myZone.id}`)}
+              title="Виж моята зона"
+              aria-label="Виж моята зона"
+            >
+              <User2 className="h-5 w-5 mr-2" />
+              Виж моята зона
+            </Button>
+          </div>
+        )}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-[1.2fr_1fr]">
+          <Card className="overflow-hidden min-w-0">
             <CardHeader>
               <CardTitle>Основни данни</CardTitle>
             </CardHeader>
@@ -372,7 +389,12 @@ export default function FireDetailsClient({
                   </Button>
                 )}
                 {viewer === "confirmed" && (
-                  <Button size="sm" onClick={generateQR} disabled={isPending}>
+                  <Button
+                    size="sm"
+                    onClick={generateQR}
+                    disabled={isPending}
+                    className="w-full sm:w-auto h-auto min-h-8 py-2 whitespace-normal break-words text-center"
+                  >
                     <QrCode className="h-4 w-4 mr-1.5" />
                     Генерирай QR за присъединяване
                   </Button>
@@ -381,7 +403,7 @@ export default function FireDetailsClient({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="overflow-hidden min-w-0">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Доброволци</span>
@@ -404,7 +426,7 @@ export default function FireDetailsClient({
                   <ul className="space-y-1">
                     {confirmed.map((r) => (
                       <li key={`c-${r.userId}`} className="text-sm">
-                        <span className="font-medium text-foreground">{r.name || r.email}</span>
+                        <span className="font-medium text-foreground break-words">{r.name || r.email}</span>
                       </li>
                     ))}
                   </ul>
@@ -420,9 +442,9 @@ export default function FireDetailsClient({
                 ) : (
                   <ul className="space-y-2">
                     {requested.map((r) => (
-                      <li key={`r-${r.userId}`} className="flex items-center justify-between gap-2">
-                        <div className="text-sm">
-                          <span className="font-medium text-foreground">{r.name || r.email}</span>
+                      <li key={`r-${r.userId}`} className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="text-sm min-w-0 max-w-full">
+                          <span className="font-medium text-foreground break-words">{r.name || r.email}</span>
                           <span className="text-muted-foreground" suppressHydrationWarning> — от {new Date(r.createdAt).toLocaleString()}</span>
                         </div>
                         {viewer === "confirmed" ? (

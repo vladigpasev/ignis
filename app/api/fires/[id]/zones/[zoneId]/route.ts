@@ -63,12 +63,33 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
   }
 
+  // Determine viewer's membership for this fire (if logged in)
+  let myZoneId: number | null = null;
+  try {
+    const session = await auth0.getSession();
+    const email = session?.user?.email;
+    if (email) {
+      const u = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      const me = u[0];
+      if (me) {
+        const row = await db
+          .select({ zoneId: zoneMembers.zoneId })
+          .from(zoneMembers)
+          .where(and(eq(zoneMembers.fireId, fireId), eq(zoneMembers.userId, me.id)))
+          .limit(1);
+        myZoneId = row[0]?.zoneId ?? null;
+      }
+    }
+  } catch {}
+
   return NextResponse.json({
     ok: true,
     zone: zone[0],
     members,
     gallery,
     updates: updates.map((u) => ({ ...u, images: imagesMap[u.id] || [] })),
+    myZoneId,
+    isMember: myZoneId != null && myZoneId === z,
   });
 }
 
@@ -99,4 +120,3 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   return NextResponse.json({ ok: false, error: "No-op" }, { status: 400 });
 }
-
