@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { zones, users, fireVolunteers, zoneMembers } from "@/lib/db/schema";
+import { zones, users, fireVolunteers, zoneMembers, zoneGalleryImages } from "@/lib/db/schema";
 import { auth0 } from "@/lib/auth0";
 import { and, desc, eq, sql } from "drizzle-orm";
 
@@ -28,6 +28,18 @@ async function requireConfirmedVolunteer(fireId: number, userId: number) {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const fireId = Number(id);
+  
+  // Определяме в коя зона (ако има) е текущият потребител
+  const me = await getLocalUser().catch(() => null);
+  let myZoneId: number | null = null;
+  if (me) {
+    const row = await db
+      .select({ zoneId: zoneMembers.zoneId })
+      .from(zoneMembers)
+      .where(and(eq(zoneMembers.fireId, fireId), eq(zoneMembers.userId, (me as any).id)))
+      .limit(1);
+    myZoneId = row[0]?.zoneId ?? null;
+  }
 
   const list = await db
     .select({
@@ -42,6 +54,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       polygon: zones.polygon,
       createdAt: zones.createdAt,
       members: sql<number>`count(${zoneMembers.id})::int`.as("members"),
+      // NEW: последната снимка от галерията като cover
+      coverUrl: sql<string | null>`
+        (
+          select ${zoneGalleryImages.url}
+          from ${zoneGalleryImages}
+          where ${zoneGalleryImages.zoneId} = ${zones.id}
+          order by ${zoneGalleryImages.createdAt} desc
+          limit 1
+        )
+      `.as("cover_url"),
     })
     .from(zones)
     .leftJoin(zoneMembers, eq(zoneMembers.zoneId, zones.id))
@@ -60,7 +82,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     )
     .orderBy(desc(zones.createdAt));
 
-  return NextResponse.json({ ok: true, zones: list });
+  // Маркираме isMember и връщаме
+  const enriched = list.map((z) => ({ ...z, isMember: myZoneId != null && z.id === myZoneId }));
+
+  return NextResponse.json({ ok: true, zones: enriched });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

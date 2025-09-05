@@ -32,6 +32,8 @@ export default function ZoneDraw({
   const [mode, setMode] = useState<"idle" | "polygon">("idle");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  // Mobile detection for adaptive UX
+  const [isMobile, setIsMobile] = useState(false);
 
   // Геометрия
   const [points, setPoints] = useState<[number, number][]>([]);
@@ -47,6 +49,20 @@ export default function ZoneDraw({
 
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { pointsRef.current = points; }, [points]);
+
+  // Detect mobile / touch or narrow screens
+  useEffect(() => {
+    try {
+      const compute = () => {
+        const coarse = window.matchMedia?.("(pointer: coarse)")?.matches || (navigator as any).maxTouchPoints > 0;
+        const narrow = window.matchMedia?.("(max-width: 768px)")?.matches;
+        setIsMobile(!!(coarse || narrow));
+      };
+      compute();
+      window.addEventListener("resize", compute);
+      return () => window.removeEventListener("resize", compute);
+    } catch {}
+  }, []);
 
   // Запомняне на интеракции за възстановяване
   const interactionsRef = useRef<{
@@ -108,15 +124,21 @@ export default function ZoneDraw({
         keyboard: (map as any).keyboard?.isEnabled?.(),
         touchZoomRotate: (map as any).touchZoomRotate?.isEnabled?.(),
       };
+      // On mobile, keep pan/zoom enabled during drawing for better UX
       (map as any).doubleClickZoom?.disable?.();
       (map as any).boxZoom?.disable?.();
-      (map as any).dragPan?.disable?.();
-      (map as any).keyboard?.disable?.();
-      (map as any).touchZoomRotate?.disable?.();
+      if (isMobile) {
+        (map as any).keyboard?.disable?.();
+        // leave dragPan and touchZoomRotate enabled on mobile
+      } else {
+        (map as any).dragPan?.disable?.();
+        (map as any).keyboard?.disable?.();
+        (map as any).touchZoomRotate?.disable?.();
+      }
     } catch {
       // ignore
     }
-  }, [map]);
+  }, [map, isMobile]);
 
   const unlockInteractions = useCallback(() => {
     if (!map || !interactionsRef.current) return;
@@ -157,7 +179,7 @@ export default function ZoneDraw({
     // активен режим → блок интеракции и подсказка
     lockInteractions();
     applyCursor();
-    setHint("Кликвай, за да добавяш точки. Двоен клик/Enter за край. Десен клик/Backspace за назад. Esc за отказ.");
+    setHint("Кликвай/тапвай, за да добавяш точки. Двоен клик/Enter за край. Десен клик/Backspace за назад. Esc за отказ.");
 
     // Интеграция с Mapbox Draw за полигон
     if (mode === "polygon") {
@@ -169,7 +191,8 @@ export default function ZoneDraw({
         }
         const draw = new MapboxDraw({
           displayControlsDefault: false,
-          controls: { polygon: true, trash: true },
+          // On mobile, hide Draw controls; we provide a compact toolbar
+          controls: isMobile ? {} : { polygon: true, trash: true },
           defaultMode: "draw_polygon",
         });
         map.addControl(draw as any, "top-right");
@@ -515,75 +538,117 @@ export default function ZoneDraw({
   }
 
   return (
-    <div className="bg-background/90 backdrop-blur-md border rounded-lg shadow-lg p-3 w-[320px] sm:w-[380px] space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-medium">Създай зона</div>
-        <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" onClick={reset} title="Откажи">
-            <XCircle className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={mode === "polygon" ? "default" : "outline"}
-          onClick={() => {
-            setMode("polygon");
-            setHint("Кликвай върху картата, за да добавяш точки.");
-          }}
-        >
-          <Pentagon className="h-4 w-4 mr-1" /> Полигон
-        </Button>
-        {mode === "polygon" && (
-          <>
-            {/* При активен Mapbox Draw скриваме локалното "Назад" и изчистваме чрез draw */}
-            {!drawRef.current && (
-              <Button size="sm" variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))} disabled={points.length === 0}>
-                <Undo2 className="h-4 w-4 mr-1" /> Назад
+    <>
+      {/* Desktop / non-drawing full panel OR any non-mobile */}
+      {!(isMobile && mode === "polygon") && (
+        <div className="bg-background/90 backdrop-blur-md border rounded-lg shadow-lg p-3 w-[320px] sm:w-[380px] space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Създай зона</div>
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="ghost" onClick={reset} title="Откажи">
+                <XCircle className="h-4 w-4" />
               </Button>
-            )}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
             <Button
               size="sm"
-              variant="outline"
+              variant={mode === "polygon" ? "default" : "outline"}
               onClick={() => {
-                if (drawRef.current) {
-                  try { (drawRef.current as any).deleteAll(); } catch {}
-                }
-                setPoints([]);
+                setMode("polygon");
+                setHint("Кликвай върху картата, за да добавяш точки.");
               }}
-              disabled={(!drawRef.current && points.length === 0)}
             >
-              Изчисти
+              <Pentagon className="h-4 w-4 mr-1" /> Полигон
             </Button>
-          </>
-        )}
-      </div>
+            {mode === "polygon" && (
+              <>
+                {/* При активен Mapbox Draw скриваме локалното "Назад" и изчистваме чрез draw */}
+                {!drawRef.current && (
+                  <Button size="sm" variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))} disabled={points.length === 0}>
+                    <Undo2 className="h-4 w-4 mr-1" /> Назад
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (drawRef.current) {
+                      try { (drawRef.current as any).deleteAll(); } catch {}
+                    }
+                    setPoints([]);
+                  }}
+                  disabled={(!drawRef.current && points.length === 0)}
+                >
+                  Изчисти
+                </Button>
+              </>
+            )}
+          </div>
 
-      <Input placeholder="Име (по желание)" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <Textarea placeholder="Описание (по желание)" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          <Input placeholder="Име (по желание)" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Textarea placeholder="Описание (по желание)" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
 
-      {mode === "polygon" && (
-        <div className="text-xs text-muted-foreground flex items-center gap-1">
-          <MousePointer2 className="h-3.5 w-3.5" />
-          <span>
-            Кликвай точки. Двоен клик/Enter за край. Десен клик/Backspace за назад. Точки: {points.length}
-          </span>
+          {mode === "polygon" && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <MousePointer2 className="h-3.5 w-3.5" />
+              <span>
+                Кликвай точки. Двоен клик/Enter за край. Десен клик/Backspace за назад. Точки: {points.length}
+              </span>
+            </div>
+          )}
+
+          {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={createZone}
+              disabled={isPending || (mode === "polygon" && points.length < 3)}
+            >
+              {isPending ? "Създаване…" : (<><Check className="h-4 w-4 mr-1" /> Създай зона</>)}
+            </Button>
+          </div>
         </div>
       )}
 
-      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          onClick={createZone}
-          disabled={isPending || (mode === "polygon" && points.length < 3)}
-        >
-          {isPending ? "Създаване…" : (<><Check className="h-4 w-4 mr-1" /> Създай зона</>)}
-        </Button>
-      </div>
-    </div>
+      {/* Mobile drawing: compact overlay controls, keep map fully usable */}
+      {isMobile && mode === "polygon" && (
+        <>
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-3 py-2 rounded-full border bg-background/90 backdrop-blur text-xs text-muted-foreground shadow">
+            Точки: {points.length} — двоен тап за край
+          </div>
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100]">
+            <div className="flex items-center gap-2 bg-background/95 backdrop-blur px-3 py-2 rounded-full border shadow-lg">
+              {!drawRef.current && (
+                <Button size="sm" variant="ghost" onClick={() => setPoints((p) => p.slice(0, -1))} disabled={points.length === 0}>
+                  Назад
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  if (drawRef.current) {
+                    try { (drawRef.current as any).deleteAll(); } catch {}
+                  }
+                  setPoints([]);
+                }}
+                disabled={(!drawRef.current && points.length === 0)}
+              >
+                Изчисти
+              </Button>
+              <Button size="sm" onClick={createZone} disabled={isPending || points.length < 3}>
+                Готово
+              </Button>
+              <Button size="sm" variant="outline" onClick={reset}>
+                Откажи
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }

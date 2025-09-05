@@ -53,10 +53,12 @@ export default function ZoneList({
   fireId,
   canEdit,
   onChange,
+  refreshAt,
 }: {
   fireId: number;
   canEdit: boolean;
   onChange?: () => void;
+  refreshAt?: number;
 }) {
   const router = useRouter();
   const [zones, setZones] = useState<Zone[]>([]);
@@ -69,7 +71,7 @@ export default function ZoneList({
   }
   useEffect(() => {
     load();
-  }, [fireId]);
+  }, [fireId, refreshAt]);
 
   const sorted = useMemo(() => {
     const arr = [...zones];

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { useMap } from "@/context/map-context";
+import { useContext } from "react";
+import { MapContext } from "@/context/map-context";
 
 export type FireListItem = {
   id: number;
@@ -39,7 +40,7 @@ export default function FireList({
   fires: FireListItem[];
   onFocus?: (f: FireListItem) => void;
 }) {
-  const { map } = useMap();
+  const map = useContext(MapContext)?.map ?? null;
 
   return (
     <div className="max-w-5xl mx-auto w-full px-4 pb-10">

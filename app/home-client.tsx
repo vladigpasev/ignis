@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import MapProvider from "@/lib/mapbox/provider";
-import MapStyles from "@/components/map/map-styles";
 import MapControls from "@/components/map/map-controls";
 import MapSearch from "@/components/map/map-search";
 
@@ -93,7 +92,7 @@ export default function HomeClient({
         >
           <MapSearch />
           <MapControls />
-          <MapStyles />
+          {/** Fixed to default streets style; no style switcher */}
 
           {/* 🆕 FIRMS Live layer (жълто/оранжево) */}
           <FirmsHotspots

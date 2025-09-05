@@ -15,6 +15,8 @@ type MapProviderProps = {
     zoom: number;
   };
   styleUrl?: string;
+  /** NEW: извиква се при `map.on("load")` */
+  onMapLoad?: (map: mapboxgl.Map) => void;
   children?: React.ReactNode;
 };
 
@@ -22,12 +24,20 @@ export default function MapProvider({
   mapContainerRef,
   initialViewState,
   styleUrl = "mapbox://styles/mapbox/streets-v12",
+  onMapLoad,
   children,
 }: MapProviderProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [ctxMap, setCtxMap] = useState<mapboxgl.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // track load state in a ref for event handlers
+  const loadedRef = useRef(false);
+  // keep a stable ref to the callback to avoid re-creating the map
+  const onLoadCbRef = useRef<MapProviderProps["onMapLoad"] | undefined>(undefined);
+  useEffect(() => {
+    onLoadCbRef.current = onMapLoad;
+  }, [onMapLoad]);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,24 +67,38 @@ export default function MapProvider({
         });
 
         mapRef.current = map;
-        setCtxMap(map); // <- контекстът се обновява само когато има map инстанция
+        setCtxMap(map);
 
         const onError = (e: any) => {
-          console.error("Mapbox error:", e);
           const msg =
             typeof e?.error?.message === "string"
               ? e.error.message
-              : "Неуспешно зареждане на карта. Виж конзолата.";
-          setError(msg);
+              : typeof e?.message === "string"
+              ? e.message
+              : null;
+          const isBenign = typeof msg === "string" && /layer .* does not exist|source .* does not exist|cannot query|style( is)? not (done )?loading/i.test(msg);
+          // After map is loaded, treat errors as non-fatal warnings to avoid noisy overlays
+          if (loadedRef.current || isBenign) {
+            console.warn("Mapbox warning:", msg || e);
+            return;
+          }
+          console.error("Mapbox error:", msg || e);
+          setError(msg || "Неуспешно зареждане на карта. Виж конзолата.");
         };
 
         map.on("error", onError);
         map.on("load", () => {
           if (cancelled) return;
           setLoaded(true);
+          loadedRef.current = true;
           try {
             map.resize();
           } catch {}
+          try {
+            onLoadCbRef.current?.(map);
+          } catch (e) {
+            console.error(e);
+          }
         });
       } catch (err: any) {
         console.error(err);
@@ -91,6 +115,7 @@ export default function MapProvider({
         mapRef.current = null;
         setCtxMap(null);
       }
+      loadedRef.current = false;
     };
   }, [
     mapContainerRef,

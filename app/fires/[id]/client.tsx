@@ -84,6 +84,7 @@ export default function FireDetailsClient({
   // zones
   const [zones, setZones] = useState<ZoneListItem[]>([]);
   const [zonesLoaded, setZonesLoaded] = useState(false);
+  const [zonesRefreshAt, setZonesRefreshAt] = useState<number>(0);
   const [showZoneCreator, setShowZoneCreator] = useState(false);
 
   // chat
@@ -159,6 +160,7 @@ export default function FireDetailsClient({
       const j = await fetch(`/api/fires/${fire.id}/zones`, { cache: "no-store" }).then((r) => r.json());
       if (j?.ok) {
         setZones(j.zones || []);
+        setZonesRefreshAt(Date.now());
       } else {
         console.error("Zones load error:", j?.error);
       }
@@ -362,7 +364,7 @@ export default function FireDetailsClient({
               <CardTitle>Зони на пожара</CardTitle>
             </CardHeader>
             <CardContent>
-              <ZoneList fireId={fire.id} canEdit={canEditZones} onChange={loadZones} />
+              <ZoneList fireId={fire.id} canEdit={canEditZones} onChange={loadZones} refreshAt={zonesRefreshAt} />
             </CardContent>
           </Card>
         </div>

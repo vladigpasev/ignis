@@ -42,3 +42,4 @@ next-env.d.ts
 
 .repomixignore
 repomix-output.xml
+chatgpt-zones-context.xml

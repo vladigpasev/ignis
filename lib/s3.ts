@@ -25,10 +25,8 @@ export async function presignPutObject(key: string, contentType: string) {
     Bucket: bucket,
     Key: key,
     ContentType: contentType || "application/octet-stream",
-    ACL: "public-read",
   });
   const url = await getSignedUrl(s3, cmd, { expiresIn: 60 * 5 });
   const publicUrl = `${publicBase.replace(/\/$/, "")}/${encodeURIComponent(key)}`;
   return { url, publicUrl, bucket, key };
 }
-
