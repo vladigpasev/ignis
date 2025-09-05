@@ -3,15 +3,13 @@
 import { useMemo, useRef, useState, useTransition, useEffect } from "react";
 import MapProvider from "@/lib/mapbox/provider";
 import MapControls from "@/components/map/map-controls";
-import MapStyles from "@/components/map/map-styles";
 import FireMarker from "@/components/fires/fire-marker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { metersToReadable } from "@/lib/geo";
-import { Navigation, QrCode, Check, User2, Users } from "lucide-react";
+import { Navigation, QrCode, Check, User2, Users, MessageCircle, Plus, X } from "lucide-react";
 import * as QRCode from "qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ZoneDraw from "@/components/zones/zone-draw";
@@ -49,6 +47,10 @@ type ZoneListItem = {
   polygon?: [number, number][];
   createdAt: string;
   members: number;
+  /** NEW - за UI подредба/бутоните */
+  isMember?: boolean;
+  /** NEW - cover снимка (последно качена), ако има */
+  coverUrl?: string | null;
 };
 
 export default function FireDetailsClient({
@@ -81,8 +83,11 @@ export default function FireDetailsClient({
 
   // zones
   const [zones, setZones] = useState<ZoneListItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"volunteers" | "zones" | "chat" | "stats">("volunteers");
-  const [stats, setStats] = useState<any>(null);
+  const [zonesLoaded, setZonesLoaded] = useState(false);
+  const [showZoneCreator, setShowZoneCreator] = useState(false);
+
+  // chat
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     if (!qrUrl) {
@@ -150,18 +155,39 @@ export default function FireDetailsClient({
   };
 
   async function loadZones() {
-    const j = await fetch(`/api/fires/${fire.id}/zones`, { cache: "no-store" }).then((r) => r.json());
-    if (j?.ok) setZones(j.zones || []);
+    try {
+      const j = await fetch(`/api/fires/${fire.id}/zones`, { cache: "no-store" }).then((r) => r.json());
+      if (j?.ok) {
+        setZones(j.zones || []);
+      } else {
+        console.error("Zones load error:", j?.error);
+      }
+    } catch (e) {
+      console.error("Zones fetch failed:", e);
+    } finally {
+      // ВАЖНО: винаги маркираме като „заредено“, за да имаме fallback (пин) и да избегнем „празна“ карта
+      setZonesLoaded(true);
+    }
   }
-  async function loadStats() {
-    const j = await fetch(`/api/fires/${fire.id}/stats`, { cache: "no-store" }).then((r) => r.json());
-    if (j?.ok) setStats(j.stats);
-  }
-
+  // Зареждаме зоните при отваряне на изгледа, за да знаем дали да показваме пин-а
   useEffect(() => {
-    if (activeTab === "zones") loadZones();
-    if (activeTab === "stats") loadStats();
-  }, [activeTab]);
+    loadZones();
+  }, []);
+
+  // Малък ретрай — ако първото извикване фейлне/карта не е готова
+  useEffect(() => {
+    if (zonesLoaded) return;
+    let tries = 0;
+    const id = setInterval(() => {
+      if (zonesLoaded || tries >= 4) {
+        clearInterval(id);
+        return;
+      }
+      tries += 1;
+      loadZones();
+    }, 1500);
+    return () => clearInterval(id);
+  }, [zonesLoaded, fire.id]);
 
   const canEditZones = viewer === "confirmed";
 
@@ -174,16 +200,27 @@ export default function FireDetailsClient({
           mapContainerRef={mapContainerRef}
           initialViewState={{ longitude: centerForMap.lng, latitude: centerForMap.lat, zoom: 15 }}
           styleUrl="mapbox://styles/mapbox/satellite-streets-v12"
+          onMapLoad={() => {
+            // NEW: безопасно презареждаме зоните точно когато стилът/картата са готови
+            loadZones();
+          }}
         >
           <MapControls />
-          <MapStyles initialStyle="satellite-streets-v12" />
-          <FireMarker id={fire.id} lat={fire.lat} lng={fire.lng} />
+          {zonesLoaded && zones.length === 0 && (
+            <FireMarker id={fire.id} lat={fire.lat} lng={fire.lng} />
+          )}
 
           {zones.length > 0 && <ZoneShapes zones={zones as any} />}
 
-          {activeTab === "zones" && canEditZones && (
+          {showZoneCreator && canEditZones && (
             <div className="absolute top-4 left-4 z-10">
-              <ZoneDraw fireId={fire.id} onCreated={loadZones} />
+              <ZoneDraw
+                fireId={fire.id}
+                onCreated={() => {
+                  setShowZoneCreator(false);
+                  loadZones();
+                }}
+              />
             </div>
           )}
         </MapProvider>
@@ -192,223 +229,173 @@ export default function FireDetailsClient({
           <Badge variant="secondary" className="shadow-lg">Пожар #{fire.id}</Badge>
         </div>
 
-        
+        {canEditZones && !showZoneCreator && (
+          <div className="absolute top-4 left-4 z-10">
+            <Button size="icon" className="rounded-full h-10 w-10 shadow-md" onClick={() => setShowZoneCreator(true)} title="Нова зона">
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto w-full px-4 py-6">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="volunteers">Доброволци</TabsTrigger>
-            <TabsTrigger value="zones">Зони</TabsTrigger>
-            <TabsTrigger value="chat">Общ чат</TabsTrigger>
-            <TabsTrigger value="stats">Статистика</TabsTrigger>
-          </TabsList>
+        <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Основни данни</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <div>
+                Статус: <span className="text-foreground font-medium">{fire.status}</span>
+              </div>
+              <div>
+                Радиус: <span className="text-foreground font-medium">{metersToReadable(fire.radiusM)}</span>
+              </div>
+              <div>
+                Координати: <span className="text-foreground font-medium">{fire.lat.toFixed(5)}, {fire.lng.toFixed(5)}</span>
+              </div>
+              <div>
+                Създаден: <span className="text-foreground font-medium" suppressHydrationWarning>{new Date(fire.createdAt).toLocaleString()}</span>
+              </div>
 
-          {activeTab === "volunteers" && (
-            <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Основни данни</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <div>
-                    Статус: <span className="text-foreground font-medium">{fire.status}</span>
-                  </div>
-                  <div>
-                    Радиус: <span className="text-foreground font-medium">{metersToReadable(fire.radiusM)}</span>
-                  </div>
-                  <div>
-                    Координати: <span className="text-foreground font-medium">{fire.lat.toFixed(5)}, {fire.lng.toFixed(5)}</span>
-                  </div>
-                  <div>
-                    Създаден: <span className="text-foreground font-medium" suppressHydrationWarning>{new Date(fire.createdAt).toLocaleString()}</span>
-                  </div>
+              <Separator className="my-3" />
 
-                  <Separator className="my-3" />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    window.open(
+                      `https://www.google.com/maps/dir/?api=1&destination=${fire.lat},${fire.lng}`,
+                      "_blank",
+                    )
+                  }
+                >
+                  <Navigation className="h-4 w-4 mr-1.5" />
+                  Навигация
+                </Button>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        window.open(
-                          `https://www.google.com/maps/dir/?api=1&destination=${fire.lat},${fire.lng}`,
-                          "_blank",
-                        )
-                      }
-                    >
-                      <Navigation className="h-4 w-4 mr-1.5" />
-                      Навигация
-                    </Button>
+                {viewer === "none" && (
+                  <Button size="sm" disabled={isPending} onClick={claim}>
+                    {isPending ? "Заявяване…" : "Заяви да съм доброволец"}
+                  </Button>
+                )}
+                {viewer === "requested" && (
+                  <Button size="sm" variant="secondary" disabled>
+                    Заявено — чака потвърждение
+                  </Button>
+                )}
+                {viewer === "confirmed" && (
+                  <Button size="sm" onClick={generateQR} disabled={isPending}>
+                    <QrCode className="h-4 w-4 mr-1.5" />
+                    Генерирай QR за присъединяване
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-                    {viewer === "none" && (
-                      <Button size="sm" disabled={isPending} onClick={claim}>
-                        {isPending ? "Заявяване…" : "Заяви да съм доброволец"}
-                      </Button>
-                    )}
-                    {viewer === "requested" && (
-                      <Button size="sm" variant="secondary" disabled>
-                        Заявено — чака потвърждение
-                      </Button>
-                    )}
-                    {viewer === "confirmed" && (
-                      <Button size="sm" onClick={generateQR} disabled={isPending}>
-                        <QrCode className="h-4 w-4 mr-1.5" />
-                        Генерирай QR за присъединяване
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Доброволци</span>
+                <span className="text-sm font-normal text-muted-foreground flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1">
+                    <Users className="h-4 w-4" /> {confirmed.length}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <User2 className="h-4 w-4" /> {requested.length}
+                  </span>
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="text-xs uppercase text-muted-foreground mb-1">Потвърдени</div>
+                {confirmed.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Няма.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {confirmed.map((r) => (
+                      <li key={`c-${r.userId}`} className="text-sm">
+                        <span className="font-medium text-foreground">{r.name || r.email}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Доброволци</span>
-                    <span className="text-sm font-normal text-muted-foreground flex items-center gap-3">
-                      <span className="inline-flex items-center gap-1">
-                        <Users className="h-4 w-4" /> {confirmed.length}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <User2 className="h-4 w-4" /> {requested.length}
-                      </span>
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground mb-1">Потвърдени</div>
-                    {confirmed.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">Няма.</div>
-                    ) : (
-                      <ul className="space-y-1">
-                        {confirmed.map((r) => (
-                          <li key={`c-${r.userId}`} className="text-sm">
-                            <span className="font-medium text-foreground">{r.name || r.email}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+              <Separator />
 
-                  <Separator />
-
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground mb-1">Заявили</div>
-                    {requested.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">Няма чакащи.</div>
-                    ) : (
-                      <ul className="space-y-2">
-                        {requested.map((r) => (
-                          <li key={`r-${r.userId}`} className="flex items-center justify-between gap-2">
-                            <div className="text-sm">
-                              <span className="font-medium text-foreground">{r.name || r.email}</span>
-                              <span className="text-muted-foreground" suppressHydrationWarning> — от {new Date(r.createdAt).toLocaleString()}</span>
-                            </div>
-                            {viewer === "confirmed" ? (
-                              <Button size="sm" variant="outline" onClick={() => approve(r.userId)} disabled={isPending}>
-                                <Check className="h-4 w-4 mr-1" />
-                                Потвърди
-                              </Button>
-                            ) : (
-                              <Badge variant="secondary">Чака потвърждение</Badge>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === "zones" && (
-            <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Зони на пожара</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ZoneList fireId={fire.id} canEdit={canEditZones} onChange={loadZones} />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === "chat" && (
-            <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Общ чат</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChatBox
-                    fetchUrl={`/api/fires/${fire.id}/chat`}
-                    postUrl={`/api/fires/${fire.id}/chat`}
-                    canBlock={viewer === "confirmed"}
-                    onBlock={async (userId) => {
-                      if (!confirm("Блокиране на потребителя от общия чат?")) return;
-                      await fetch(`/api/fires/${fire.id}/blocks`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ blockedUserId: userId }),
-                      });
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === "stats" && (
-            <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Статистика</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!stats ? (
-                    <div className="text-sm text-muted-foreground">Зареждане…</div>
-                  ) : (
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="rounded-lg border p-4">
-                        <div className="text-xs uppercase text-muted-foreground">Доброволци</div>
-                        <div className="mt-1 text-sm">
-                          Потвърдени: <b>{stats.volunteers.confirmed}</b>
+              <div>
+                <div className="text-xs uppercase text-muted-foreground mb-1">Заявили</div>
+                {requested.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Няма чакащи.</div>
+                ) : (
+                  <ul className="space-y-2">
+                    {requested.map((r) => (
+                      <li key={`r-${r.userId}`} className="flex items-center justify-between gap-2">
+                        <div className="text-sm">
+                          <span className="font-medium text-foreground">{r.name || r.email}</span>
+                          <span className="text-muted-foreground" suppressHydrationWarning> — от {new Date(r.createdAt).toLocaleString()}</span>
                         </div>
-                        <div className="text-sm">Чакащи: <b>{stats.volunteers.requested}</b></div>
-                      </div>
-                      <div className="rounded-lg border p-4">
-                        <div className="text-xs uppercase text-muted-foreground">Зони</div>
-                        <div className="mt-1 text-sm">Общ брой: <b>{stats.zones.count}</b></div>
-                        <div className="text-sm mt-2">Членове по зона:</div>
-                        <ul className="text-sm text-muted-foreground mt-1">
-                          {stats.zones.membersPerZone.map((z: any) => (
-                            <li key={z.zoneId}>
-                              Зона #{z.zoneId}: <b>{z.members}</b>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="rounded-lg border p-4">
-                        <div className="text-xs uppercase text-muted-foreground">Активност в чатове</div>
-                        <div className="mt-1 text-sm">Общо съобщения: <b>{stats.chat.total}</b></div>
-                        <div className="text-sm">Последен час: <b>{stats.chat.lastHour}</b></div>
-                        <div className="text-sm">Последни 24ч: <b>{stats.chat.lastDay}</b></div>
-                      </div>
-                      <div className="rounded-lg border p-4">
-                        <div className="text-xs uppercase text-muted-foreground">QR</div>
-                        <div className="mt-1 text-sm">Издадени: <b>{stats.qr.issued}</b></div>
-                        <div className="text-sm">Използвани: <b>{stats.qr.used}</b></div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        {viewer === "confirmed" ? (
+                          <Button size="sm" variant="outline" onClick={() => approve(r.userId)} disabled={isPending}>
+                            <Check className="h-4 w-4 mr-1" />
+                            Потвърди
+                          </Button>
+                        ) : (
+                          <Badge variant="secondary">Чака потвърждение</Badge>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Зони на пожара</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ZoneList fireId={fire.id} canEdit={canEditZones} onChange={loadZones} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Floating Chat Button + Panel */}
+      <div className="fixed bottom-4 right-4 z-20">
+        {chatOpen && (
+          <div className="mb-3 w-[min(380px,90vw)] max-h-[70vh] bg-background/95 backdrop-blur border rounded-lg shadow-xl p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium">Общ чат</div>
+              <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-        </Tabs>
+            <ChatBox
+              fetchUrl={`/api/fires/${fire.id}/chat`}
+              postUrl={`/api/fires/${fire.id}/chat`}
+              canBlock={viewer === "confirmed"}
+              onBlock={async (userId) => {
+                if (!confirm("Блокиране на потребителя от общия чат?")) return;
+                await fetch(`/api/fires/${fire.id}/blocks`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ blockedUserId: userId }),
+                });
+              }}
+            />
+          </div>
+        )}
+        <Button size="icon" className="rounded-full h-12 w-12 shadow-lg" onClick={() => setChatOpen((v) => !v)} title="Чат">
+          <MessageCircle className="h-6 w-6" />
+        </Button>
       </div>
 
       <Dialog open={isQR} onOpenChange={setIsQR}>
