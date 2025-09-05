@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { metersToReadable } from "@/lib/geo";
+import { metersToReadable, circlePolygon } from "@/lib/geo";
 import { Navigation, QrCode, Check, User2, Users, MessageCircle, Plus, X } from "lucide-react";
 import * as QRCode from "qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -16,6 +16,7 @@ import ZoneDraw from "@/components/zones/zone-draw";
 import ZoneList from "@/components/zones/zone-list";
 import ZoneShapes from "@/components/zones/zone-shapes";
 import ChatBox from "@/components/chat/chat-box";
+import type mapboxgl from "mapbox-gl";
 
 type Fire = {
   id: number;
@@ -89,6 +90,9 @@ export default function FireDetailsClient({
 
   // chat
   const [chatOpen, setChatOpen] = useState(false);
+  // local ref to map instance captured on load
+  const [mapReady, setMapReady] = useState(false);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
 
   useEffect(() => {
     if (!qrUrl) {
@@ -193,6 +197,82 @@ export default function FireDetailsClient({
 
   const canEditZones = viewer === "confirmed";
 
+  // Compute and constrain map view to the fire area (zones + vicinity)
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+
+    // Helper: compute [w, s, e, n] bounds
+    const computeBounds = (): [number, number, number, number] | null => {
+      try {
+        if (zones && zones.length > 0) {
+          let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity;
+          for (const z of zones) {
+            if (z.geomType === "circle" && z.centerLat != null && z.centerLng != null && z.radiusM) {
+              const poly = circlePolygon({ lat: z.centerLat, lng: z.centerLng }, z.radiusM, 64).geometry.coordinates[0];
+              for (const [lng, lat] of poly) {
+                if (lng < w) w = lng;
+                if (lng > e) e = lng;
+                if (lat < s) s = lat;
+                if (lat > n) n = lat;
+              }
+            } else if (z.polygon && z.polygon.length > 0) {
+              for (const [lng, lat] of z.polygon) {
+                if (lng < w) w = lng;
+                if (lng > e) e = lng;
+                if (lat < s) s = lat;
+                if (lat > n) n = lat;
+              }
+            }
+          }
+          if (isFinite(w) && isFinite(s) && isFinite(e) && isFinite(n)) return [w, s, e, n];
+        }
+        // Fallback to fire center + radius if no zones
+        const lat = fire.lat;
+        const lng = fire.lng;
+        const r = Math.max(200, fire.radiusM || 500); // ensure minimal radius
+        const degLat = r / 111320; // ~ meters per degree latitude
+        const degLng = r / (111320 * Math.cos((lat * Math.PI) / 180) || 1);
+        return [lng - degLng, lat - degLat, lng + degLng, lat + degLat];
+      } catch {
+        return null;
+      }
+    };
+
+    // Helper: expand bounds by a factor (relative to width/height) plus a small constant margin
+    const expand = (b: [number, number, number, number], factor = 0.3): [number, number, number, number] => {
+      const [w, s, e, n] = b;
+      const width = Math.max(1e-5, e - w);
+      const height = Math.max(1e-5, n - s);
+      const kx = width * factor + 0.002; // ~200m lon margin near equator
+      const ky = height * factor + 0.002; // ~200m lat margin
+      return [w - kx, s - ky, e + kx, n + ky];
+    };
+
+    const raw = computeBounds();
+    if (!raw) return;
+
+    // Soft fit for viewport, wider bounds to limit panning
+    const fit = expand(raw, 0.35);
+    const clamp = expand(raw, 0.9);
+
+    try {
+      // Apply bounds and min/max zoom constraints
+      map.setMaxBounds([[clamp[0], clamp[1]], [clamp[2], clamp[3]]]);
+      map.setMaxZoom(19);
+
+      // Fit view and then prevent zooming out too far
+      map.fitBounds([[fit[0], fit[1]], [fit[2], fit[3]]], { padding: 60, maxZoom: 17, duration: 600 });
+      map.once("moveend", () => {
+        try {
+          // Allow zooming out only a bit from the fitted view
+          const current = map.getZoom();
+          map.setMinZoom(Math.max(11, current - 1.2));
+        } catch {}
+      });
+    } catch {}
+  }, [mapReady, zonesLoaded, zones, fire.id, fire.lat, fire.lng, fire.radiusM]);
+
   return (
     <div className="w-screen min-h-screen">
       <div className="relative h-[65vh] w-full">
@@ -202,8 +282,10 @@ export default function FireDetailsClient({
           mapContainerRef={mapContainerRef}
           initialViewState={{ longitude: centerForMap.lng, latitude: centerForMap.lat, zoom: 15 }}
           styleUrl="mapbox://styles/mapbox/satellite-streets-v12"
-          onMapLoad={() => {
+          onMapLoad={(map) => {
             // NEW: безопасно презареждаме зоните точно когато стилът/картата са готови
+            mapRef.current = map;
+            setMapReady(true);
             loadZones();
           }}
         >
@@ -222,6 +304,7 @@ export default function FireDetailsClient({
                   setShowZoneCreator(false);
                   loadZones();
                 }}
+                onClose={() => setShowZoneCreator(false)}
               />
             </div>
           )}
@@ -233,8 +316,9 @@ export default function FireDetailsClient({
 
         {canEditZones && !showZoneCreator && (
           <div className="absolute top-4 left-4 z-10">
-            <Button size="icon" className="rounded-full h-10 w-10 shadow-md" onClick={() => setShowZoneCreator(true)} title="Нова зона">
-              <Plus className="h-5 w-5" />
+            <Button size="sm" className="rounded-full shadow-md" onClick={() => setShowZoneCreator(true)} title="Създай зона">
+              <Plus className="h-4 w-4 mr-1" />
+              Създай зона
             </Button>
           </div>
         )}

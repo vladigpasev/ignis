@@ -5,7 +5,7 @@ import { useMap } from "@/context/map-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Pentagon, MousePointer2, Undo2, Check, XCircle } from "lucide-react";
+import { MousePointer2, Undo2, Check, XCircle } from "lucide-react";
 import type mapboxgl from "mapbox-gl";
 // Полигонално рисуване чрез Mapbox Draw (както в docs примера)
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
@@ -22,14 +22,16 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 export default function ZoneDraw({
   fireId,
   onCreated,
+  onClose,
 }: {
   fireId: number;
   onCreated?: () => void;
+  onClose?: () => void;
 }) {
   const { map } = useMap();
 
   // UI/формови полета
-  const [mode, setMode] = useState<"idle" | "polygon">("idle");
+  const [mode, setMode] = useState<"idle" | "polygon">("polygon");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   // Mobile detection for adaptive UX
@@ -191,8 +193,8 @@ export default function ZoneDraw({
         }
         const draw = new MapboxDraw({
           displayControlsDefault: false,
-          // On mobile, hide Draw controls; we provide a compact toolbar
-          controls: isMobile ? {} : { polygon: true, trash: true },
+          // Show only trash on desktop (polygon is the only mode and starts directly)
+          controls: isMobile ? {} : { trash: true },
           defaultMode: "draw_polygon",
         });
         map.addControl(draw as any, "top-right");
@@ -215,14 +217,30 @@ export default function ZoneDraw({
         };
         const onCreate = () => syncFromDraw();
         const onUpdate = () => syncFromDraw();
-        const onDelete = () => setPoints([]);
+        const onDelete = () => {
+          setPoints([]);
+          try { (draw as any).changeMode && (draw as any).changeMode("draw_polygon"); } catch {}
+        };
+        const onModeChange = (ev: any) => {
+          try {
+            const modeName = ev?.mode;
+            if (modeName !== "draw_polygon") {
+              const data = draw.getAll();
+              const hasFeatures = !!(data && data.features && data.features.length > 0);
+              if (!hasFeatures) {
+                (draw as any).changeMode && (draw as any).changeMode("draw_polygon");
+              }
+            }
+          } catch {}
+        };
 
         map.on("draw.create", onCreate as any);
         map.on("draw.update", onUpdate as any);
         map.on("draw.delete", onDelete as any);
+        map.on("draw.modechange", onModeChange as any);
 
         // Запазваме cleanup функции в ref за по-късно
-        (drawRef as any).listeners = { onCreate, onUpdate, onDelete };
+        (drawRef as any).listeners = { onCreate, onUpdate, onDelete, onModeChange };
       } catch (e) {
         console.error("MapboxDraw init error", e);
       }
@@ -349,18 +367,34 @@ export default function ZoneDraw({
 
     const onKeyDown = (e: KeyboardEvent) => {
       const m = modeRef.current;
-      if (m === "polygon") {
-        if (e.key === "Escape") reset();
-        if ((e.key === "Backspace" || e.key === "Delete") && pointsRef.current.length > 0) {
-          e.preventDefault();
-          setPoints((p) => p.slice(0, -1));
-        }
+      if (m !== "polygon") return;
+
+      // Always allow closing with Escape
+      if (e.key === "Escape") {
+        e.preventDefault();
+        reset();
+        return;
+      }
+
+      // If Mapbox Draw is active, let it handle Backspace/Delete for vertex/feature deletion.
+      if (drawRef.current) {
         if ((e.key === "Enter" || e.key === "Return") && pointsRef.current.length >= 3) {
+          // Allow Enter to finalize via our create handler
           e.preventDefault();
           createZone();
         }
+        return;
       }
-      // circle mode removed
+
+      // Fallback (no Draw): local handling
+      if ((e.key === "Backspace" || e.key === "Delete") && pointsRef.current.length > 0) {
+        e.preventDefault();
+        setPoints((p) => p.slice(0, -1));
+      }
+      if ((e.key === "Enter" || e.key === "Return") && pointsRef.current.length >= 3) {
+        e.preventDefault();
+        createZone();
+      }
     };
 
     // Mapbox събития (както при докладване на пожар) – за circle
@@ -396,6 +430,7 @@ export default function ZoneDraw({
               try { map.off("draw.create", lst.onCreate as any); } catch {}
               try { map.off("draw.update", lst.onUpdate as any); } catch {}
               try { map.off("draw.delete", lst.onDelete as any); } catch {}
+              try { map.off("draw.modechange", lst.onModeChange as any); } catch {}
             }
             map.removeControl(drawRef.current as any);
           }
@@ -545,46 +580,33 @@ export default function ZoneDraw({
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium">Създай зона</div>
             <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" onClick={reset} title="Откажи">
+              <Button size="icon" variant="ghost" onClick={() => { reset(); onClose?.(); }} title="Затвори">
                 <XCircle className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           <div className="flex gap-2">
+            {/* При активен Mapbox Draw скриваме локалното "Назад" и изчистваме чрез draw */}
+            {!drawRef.current && (
+              <Button size="sm" variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))} disabled={points.length === 0}>
+                <Undo2 className="h-4 w-4 mr-1" /> Назад
+              </Button>
+            )}
             <Button
               size="sm"
-              variant={mode === "polygon" ? "default" : "outline"}
+              variant="outline"
               onClick={() => {
-                setMode("polygon");
-                setHint("Кликвай върху картата, за да добавяш точки.");
+                if (drawRef.current) {
+                  try { (drawRef.current as any).deleteAll(); } catch {}
+                  try { (drawRef.current as any).changeMode && (drawRef.current as any).changeMode("draw_polygon"); } catch {}
+                }
+                setPoints([]);
               }}
+              disabled={(!drawRef.current && points.length === 0)}
             >
-              <Pentagon className="h-4 w-4 mr-1" /> Полигон
+              Изчисти
             </Button>
-            {mode === "polygon" && (
-              <>
-                {/* При активен Mapbox Draw скриваме локалното "Назад" и изчистваме чрез draw */}
-                {!drawRef.current && (
-                  <Button size="sm" variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))} disabled={points.length === 0}>
-                    <Undo2 className="h-4 w-4 mr-1" /> Назад
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (drawRef.current) {
-                      try { (drawRef.current as any).deleteAll(); } catch {}
-                    }
-                    setPoints([]);
-                  }}
-                  disabled={(!drawRef.current && points.length === 0)}
-                >
-                  Изчисти
-                </Button>
-              </>
-            )}
           </div>
 
           <Input placeholder="Име (по желание)" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -632,6 +654,7 @@ export default function ZoneDraw({
                 onClick={() => {
                   if (drawRef.current) {
                     try { (drawRef.current as any).deleteAll(); } catch {}
+                    try { (drawRef.current as any).changeMode && (drawRef.current as any).changeMode("draw_polygon"); } catch {}
                   }
                   setPoints([]);
                 }}
@@ -642,7 +665,7 @@ export default function ZoneDraw({
               <Button size="sm" onClick={createZone} disabled={isPending || points.length < 3}>
                 Готово
               </Button>
-              <Button size="sm" variant="outline" onClick={reset}>
+              <Button size="sm" variant="outline" onClick={() => { reset(); onClose?.(); }}>
                 Откажи
               </Button>
             </div>
