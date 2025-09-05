@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { fires, users, fireVolunteers, fireJoinTokens, type Fire } from "@/lib/db/schema";
+import { fires, users, fireVolunteers, fireJoinTokens, fireJoinTokenUses, type Fire } from "@/lib/db/schema";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
 import crypto from "crypto";
@@ -203,6 +203,11 @@ export async function approveVolunteer(form: FormData) {
       set: { status: "confirmed", updatedAt: new Date() },
     });
 
+  // Auto-unblock if previously blocked in general chat
+  const { chatBlocks } = await import("@/lib/db/schema");
+  const { and, eq } = await import("drizzle-orm");
+  await db.delete(chatBlocks).where(and(eq(chatBlocks.fireId, fireId), eq(chatBlocks.blockedUserId, userId)));
+
   revalidatePath(`/fires/${fireId}`);
   return { ok: true };
 }
@@ -263,5 +268,17 @@ export async function joinWithToken(fireId: number, token: string) {
       target: [fireVolunteers.fireId, fireVolunteers.userId],
       set: { status: "confirmed", updatedAt: new Date() },
     });
+  // record token use (best-effort)
+  try {
+    const tokenRow = rows[0];
+    await db.insert(fireJoinTokenUses).values({ tokenId: tokenRow.id, userId: local.id });
+  } catch {}
+
+  // Auto-unblock in general chat upon becoming confirmed (best-effort)
+  try {
+    const { chatBlocks } = await import("@/lib/db/schema");
+    const { and, eq } = await import("drizzle-orm");
+    await db.delete(chatBlocks).where(and(eq(chatBlocks.fireId, fireId), eq(chatBlocks.blockedUserId, local.id)));
+  } catch {}
   return { ok: true };
 }

@@ -24,6 +24,10 @@ export default function MapStyles({ initialStyle = "streets-v12" }: { initialSty
   const { map } = useMap();
   const { setTheme } = useTheme();
   const [activeStyle, setActiveStyle] = useState(initialStyle);
+  const [mounted, setMounted] = useState(false);
+
+  // Избягваме SSR за Tabs/ids, за да няма hydration mismatch
+  useEffect(() => setMounted(true), []);
 
   const handleChange = (value: string) => {
     if (!map) return;
@@ -34,6 +38,8 @@ export default function MapStyles({ initialStyle = "streets-v12" }: { initialSty
   useEffect(() => {
     setTheme(activeStyle === "dark-v11" ? "dark" : "light");
   }, [activeStyle, setTheme]);
+
+  if (!mounted) return null;
 
   return (
     <aside className="absolute bottom-4 left-4 z-10">

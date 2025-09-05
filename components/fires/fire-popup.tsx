@@ -28,7 +28,7 @@ export default function FirePopup({ id, lat, lng, radiusM, createdAt, onClose, v
           Радиус: <span className="font-medium text-foreground">{metersToReadable(radiusM)}</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          ID: {id} • {created.toLocaleString()}
+          ID: {id} • <span suppressHydrationWarning>{created.toLocaleString()}</span>
         </p>
         {(typeof volunteersConfirmed === 'number' || typeof volunteersRequested === 'number') && (
           <div className="mt-2 flex items-center gap-2">

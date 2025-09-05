@@ -10,6 +10,7 @@ import {
   doublePrecision,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { jsonb } from 'drizzle-orm/pg-core';
 
 export const users = pgTable(
   'users',
@@ -155,3 +156,137 @@ export type FireJoinToken = {
   expiresAt: Date;
   revokedAt: Date | null;
 };
+
+// ---------- ZONES ----------
+export const zones = pgTable(
+  'zones',
+  {
+    id: serial('id').primaryKey(),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 120 }),
+    description: text('description'),
+    geomType: varchar('geom_type', { length: 10 }).notNull(), // 'circle' | 'polygon'
+    centerLat: doublePrecision('center_lat'),
+    centerLng: doublePrecision('center_lng'),
+    radiusM: integer('radius_m'),
+    polygon: jsonb('polygon'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    fireIdx: index('zones_fire_id_idx').on(t.fireId),
+  })
+);
+
+export const zoneMembers = pgTable(
+  'zone_members',
+  {
+    id: serial('id').primaryKey(),
+    zoneId: integer('zone_id').notNull().references(() => zones.id, { onDelete: 'cascade' }),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    oneZonePerFirePerUser: uniqueIndex('zone_members_fire_user_unique').on(t.fireId, t.userId),
+    zoneIdx: index('zone_members_zone_id_idx').on(t.zoneId),
+    fireIdx: index('zone_members_fire_id_idx').on(t.fireId),
+    userIdx: index('zone_members_user_id_idx').on(t.userId),
+  })
+);
+
+export const zoneGalleryImages = pgTable(
+  'zone_gallery_images',
+  {
+    id: serial('id').primaryKey(),
+    zoneId: integer('zone_id').notNull().references(() => zones.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    s3Key: varchar('s3_key', { length: 256 }).notNull(),
+    url: text('url').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    zoneIdx: index('zone_gallery_zone_idx').on(t.zoneId),
+  })
+);
+
+export const zoneUpdates = pgTable(
+  'zone_updates',
+  {
+    id: serial('id').primaryKey(),
+    zoneId: integer('zone_id').notNull().references(() => zones.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    text: text('text'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    zoneIdx: index('zone_updates_zone_idx').on(t.zoneId),
+  })
+);
+
+export const zoneUpdateImages = pgTable(
+  'zone_update_images',
+  {
+    id: serial('id').primaryKey(),
+    updateId: integer('update_id').notNull().references(() => zoneUpdates.id, { onDelete: 'cascade' }),
+    s3Key: varchar('s3_key', { length: 256 }).notNull(),
+    url: text('url').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+  },
+  (t) => ({
+    updIdx: index('zone_update_images_update_idx').on(t.updateId),
+  })
+);
+
+// ---------- CHATS ----------
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: serial('id').primaryKey(),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    zoneId: integer('zone_id').references(() => zones.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    message: text('message').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => ({
+    fireIdx: index('chat_fire_idx').on(t.fireId),
+    zoneIdx: index('chat_zone_idx').on(t.zoneId),
+    createdIdx: index('chat_created_idx').on(t.createdAt),
+  })
+);
+
+export const chatBlocks = pgTable(
+  'chat_blocks',
+  {
+    id: serial('id').primaryKey(),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    blockedUserId: integer('blocked_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    blockedByUserId: integer('blocked_by_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueBlock: uniqueIndex('chat_blocks_fire_blocked_unique').on(t.fireId, t.blockedUserId),
+    fireIdx: index('chat_blocks_fire_idx').on(t.fireId),
+  })
+);
+
+// ---------- QR token uses ----------
+export const fireJoinTokenUses = pgTable(
+  'fire_join_token_uses',
+  {
+    id: serial('id').primaryKey(),
+    tokenId: integer('token_id').notNull().references(() => fireJoinTokens.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    usedAt: timestamp('used_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    tokenIdx: index('fire_join_token_uses_token_idx').on(t.tokenId),
+    userIdx: index('fire_join_token_uses_user_idx').on(t.userId),
+  })
+);

@@ -7,7 +7,7 @@ export type MapContextType = {
   map: mapboxgl.Map | null;
 };
 
-export const MapContext = createContext<MapContextType>({ map: null });
+export const MapContext = createContext<MapContextType | undefined>(undefined);
 
 export function useMap() {
   const ctx = useContext(MapContext);
@@ -16,4 +16,3 @@ export function useMap() {
   }
   return ctx;
 }
-

@@ -100,7 +100,7 @@ export default function FirmsPopup({
         </p>
 
         {timeLabel && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
             {timeLabel}
           </p>
         )}
