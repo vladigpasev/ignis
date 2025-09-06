@@ -34,9 +34,14 @@ export default function Header() {
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
+              <NavigationMenuLink asChild className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}>
+                <Link href="#">Thirteen</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
               {/* Auth navigation renders its own <a> elements; do not nest in Link */}
               <div className={cn("px-5 py-2")}> 
-                <AuthNav />
+                <AuthNav/>
               </div>
             </NavigationMenuItem>
           </NavigationMenuList>

@@ -124,6 +124,55 @@
   }
 }
 
+@layer utilities {
+  .caption {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #119C59;
+  }
+
+  .heading-one {
+    font-size: 3.375rem;
+    font-weight: 700;
+    line-height: 110%;
+    color: #21272A;
+  }
+
+  .heading-two {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 110%;
+    color: #21272A;
+  }
+
+  .body-text {
+    font-size: 1.125rem;
+    font-weight: 400;
+    line-height: 140%;
+    color: #21272A;
+  }
+
+  .button-primary {
+    padding: 24px 32px;
+    background-color: #119C59;
+    line-height: 1;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+
+  .button-secondary {
+    padding: 24px 32px;
+    background-color: transparent;
+    line-height: 1;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #119C59;
+    border: 2px solid #119C59;
+  }
+}
+
 /* ===== Custom Mapbox Popup Styling ===== */
 .mapboxgl-custom-popup .mapboxgl-popup-content {
   @apply bg-card text-card-foreground p-5 rounded-lg;

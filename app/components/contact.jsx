@@ -31,11 +31,11 @@ export default function ContactForm() {
   return (
     <section className="py-20 bg-white">
       <div className="max-w-2xl mx-auto px-4 text-center">
-        <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">
-          Contact Me
+        <p className="caption">
+          Подкрепи каузата
         </p>
-        <h2 className="text-2xl font-bold mb-8">
-          Bibendum amet at molestie mattis.
+        <h2 className="heading-two pb-[48px]">
+          Твоето дарение спасява животи и природа.
         </h2>
 
         <Form {...form}>
@@ -120,7 +120,7 @@ export default function ContactForm() {
 
             {/* Submit */}
             <div className="flex justify-center">
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" className="button-primary">
                 Send Message
               </Button>
             </div>
