@@ -1,4 +1,5 @@
 import { Auth0Client } from "@auth0/nextjs-auth0/server";
+import { getAppBaseUrl } from "./env";
 
 // Initialize the Auth0 client.
 // Options are automatically loaded from environment variables:
@@ -9,6 +10,8 @@ import { Auth0Client } from "@auth0/nextjs-auth0/server";
 // - AUTH0_SECRET
 // Provide API-specific parameters explicitly.
 export const auth0 = new Auth0Client({
+  // Ensure Auth0 uses the correct base URL in all environments
+  baseURL: getAppBaseUrl(),
   authorizationParameters: {
     ...(process.env.AUTH0_SCOPE ? { scope: process.env.AUTH0_SCOPE } : {}),
     ...(process.env.AUTH0_AUDIENCE &&
