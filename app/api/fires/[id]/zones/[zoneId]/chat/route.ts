@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { chatMessages, users, zoneMembers } from "@/lib/db/schema";
+import { chatMessages, users, zoneMembers, fires, fireDeactivationVotes } from "@/lib/db/schema";
 import { auth0 } from "@/lib/auth0";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
@@ -71,7 +71,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!body) return NextResponse.json({ ok: false, error: "Empty message" }, { status: 400 });
 
   const [created] = await db.insert(chatMessages).values({ fireId, zoneId: z, userId: me.id, message: body }).returning();
-
+  try {
+    await db.update(fires).set({ lastActivityAt: new Date(), updatedAt: new Date(), status: 'active', deactivatedAt: null }).where(eq(fires.id, fireId));
+    await db.delete(fireDeactivationVotes).where(eq(fireDeactivationVotes.fireId, fireId));
+  } catch {}
   return NextResponse.json({ ok: true, message: { id: created.id } });
 }
-

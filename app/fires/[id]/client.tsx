@@ -92,6 +92,33 @@ export default function FireDetailsClient({
   const [zonesRefreshAt, setZonesRefreshAt] = useState<number>(0);
   const [showZoneCreator, setShowZoneCreator] = useState(false);
 
+  // Deactivation (manual vote) state
+  const [deactStatus, setDeactStatus] = useState<{ status: string; votes: number; required: number; hasVoted?: boolean } | null>(null);
+  const [deactLoading, setDeactLoading] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const j = await fetch(`/api/fires/${fire.id}/deactivate`, { cache: "no-store" }).then((r) => r.json());
+        if (j?.ok) setDeactStatus({ status: j.status, votes: j.votes, required: j.required, hasVoted: j.hasVoted });
+      } catch {}
+    })();
+  }, [fire.id]);
+  const voteDeactivate = async () => {
+    setDeactLoading(true);
+    try {
+      const j = await fetch(`/api/fires/${fire.id}/deactivate`, { method: 'POST' }).then((r) => r.json());
+      if (j?.ok) {
+        const s = await fetch(`/api/fires/${fire.id}/deactivate`, { cache: 'no-store' }).then((r) => r.json());
+        if (s?.ok) setDeactStatus({ status: s.status, votes: s.votes, required: s.required, hasVoted: true });
+        if (s?.status === 'inactive') {
+          // Optionally redirect back to list
+          // router.push('/fires');
+        }
+      }
+    } catch {}
+    setDeactLoading(false);
+  };
+
   // chat
   const [chatOpen, setChatOpen] = useState(false);
   const [activeChat, setActiveChat] = useState<"fire" | "zone">("fire");
@@ -337,6 +364,9 @@ export default function FireDetailsClient({
       </div>
 
       <div className="max-w-6xl mx-auto w-full px-4 py-6">
+        {deactStatus?.status === 'inactive' && (
+          <div className="mb-4 text-sm bg-muted rounded-md p-3">Този пожар е неактивен (скрит от картата).</div>
+        )}
         {myZone && (
           <div className="mb-6">
             <Button
@@ -476,7 +506,17 @@ export default function FireDetailsClient({
         <div className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Зони на пожара</CardTitle>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <CardTitle>Зони на пожара</CardTitle>
+                {viewer === "confirmed" && deactStatus?.status === 'active' && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Button size="sm" variant="outline" onClick={voteDeactivate} disabled={deactLoading || deactStatus?.hasVoted} title="Гласувай за деактивиране">
+                      {deactStatus?.hasVoted ? 'Гласувахте' : 'Маркирай като неактивен'}
+                    </Button>
+                    <span className="text-muted-foreground">Гласове: {deactStatus?.votes ?? 0}/{deactStatus?.required ?? 0}</span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <ZoneList fireId={fire.id} canEdit={canEditZones} onChange={loadZones} refreshAt={zonesRefreshAt} />

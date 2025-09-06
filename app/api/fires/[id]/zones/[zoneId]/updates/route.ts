@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, fireVolunteers, zoneMembers, zones, zoneUpdates, zoneUpdateImages } from "@/lib/db/schema";
+import { users, fireVolunteers, zoneMembers, zones, zoneUpdates, zoneUpdateImages, fires, fireDeactivationVotes } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
 
@@ -63,6 +63,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
+    // Touch fire activity
+    try {
+      await db.update(fires).set({ lastActivityAt: new Date(), updatedAt: new Date(), status: 'active', deactivatedAt: null }).where(eq(fires.id, fireId));
+      await db.delete(fireDeactivationVotes).where(eq(fireDeactivationVotes.fireId, fireId));
+    } catch {}
+
     return NextResponse.json({ ok: true, id: upd.id });
   } catch (e: any) {
     const msg = e?.message || "Error";
@@ -70,4 +76,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }
-

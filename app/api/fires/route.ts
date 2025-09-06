@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     const rows = (await db
       .select()
       .from(fires)
+      .where(eq(fires.status, 'active'))
       .orderBy(desc(fires.createdAt))
       .limit(limit)) as Fire[];
 

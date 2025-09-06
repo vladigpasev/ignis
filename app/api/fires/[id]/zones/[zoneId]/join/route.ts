@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { zones, zoneMembers, users, fireVolunteers } from "@/lib/db/schema";
+import { zones, zoneMembers, users, fireVolunteers, fires, fireDeactivationVotes } from "@/lib/db/schema";
 import { ensureSbUser, getOrCreateZoneChannel, joinUserToChannel } from "@/lib/sendbird";
 import { auth0 } from "@/lib/auth0";
 import { and, eq } from "drizzle-orm";
@@ -53,6 +53,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         target: [zoneMembers.fireId, zoneMembers.userId],
         set: { zoneId: z },
       });
+
+    try {
+      await db.update(fires).set({ lastActivityAt: new Date(), updatedAt: new Date(), status: 'active', deactivatedAt: null }).where(eq(fires.id, fireId));
+      await db.delete(fireDeactivationVotes).where(eq(fireDeactivationVotes.fireId, fireId));
+    } catch {}
 
     // Auto-join Sendbird zone channel (best-effort)
     try {

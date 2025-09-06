@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { zones, users, fireVolunteers, zoneMembers, zoneGalleryImages } from "@/lib/db/schema";
+import { zones, users, fireVolunteers, zoneMembers, zoneGalleryImages, fires, fireDeactivationVotes } from "@/lib/db/schema";
 import { auth0 } from "@/lib/auth0";
 import { and, desc, eq, sql } from "drizzle-orm";
 
@@ -126,6 +126,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         createdBy: me.id,
       })
       .returning();
+
+    try {
+      await db.update(fires).set({ lastActivityAt: new Date(), updatedAt: new Date(), status: 'active', deactivatedAt: null }).where(eq(fires.id, fireId));
+      await db.delete(fireDeactivationVotes).where(eq(fireDeactivationVotes.fireId, fireId));
+    } catch {}
 
     return NextResponse.json({ ok: true, zone: created });
   } catch (e: any) {

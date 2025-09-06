@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { fires, users, fireVolunteers, fireJoinTokens, fireJoinTokenUses, type Fire } from "@/lib/db/schema";
+import { fires, users, fireVolunteers, fireJoinTokens, fireJoinTokenUses, fireDeactivationVotes, type Fire } from "@/lib/db/schema";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
 import crypto from "crypto";
@@ -52,10 +52,68 @@ async function ensureSendbirdJoined(fireId: number, userId: number) {
   }
 }
 
+// ----- Activity helpers -----
+function inactivityDays() {
+  const d = Number(process.env.FIRE_INACTIVITY_DAYS || 3);
+  return Number.isFinite(d) && d > 0 ? d : 3;
+}
+
+async function reactivateFireIfNeeded(fireId: number) {
+  try {
+    // Reactivate if currently inactive; clear previous votes
+    await db.update(fires).set({ status: 'active', deactivatedAt: null, updatedAt: new Date() }).where(and(eq(fires.id, fireId), eq(fires.status, 'inactive')));
+    await db.delete(fireDeactivationVotes).where(eq(fireDeactivationVotes.fireId, fireId));
+  } catch {}
+}
+
+async function touchFireActivity(fireId: number) {
+  try {
+    await db.update(fires).set({ lastActivityAt: new Date(), updatedAt: new Date() }).where(eq(fires.id, fireId));
+    await reactivateFireIfNeeded(fireId);
+  } catch {}
+}
+
+export async function autoDeactivateStaleFires() {
+  const days = inactivityDays();
+  // Refresh last_activity_at from related tables (best-effort)
+  try {
+    await db.execute(sql`
+      UPDATE "fires" f
+      SET "last_activity_at" = GREATEST(
+        f."updated_at",
+        COALESCE((SELECT MAX(u."created_at") FROM "zone_updates" u JOIN "zones" z ON z."id" = u."zone_id" WHERE z."fire_id" = f."id"), to_timestamp(0)),
+        COALESCE((SELECT MAX(m."created_at") FROM "chat_messages" m WHERE m."fire_id" = f."id" AND m."deleted_at" IS NULL), to_timestamp(0)),
+        COALESCE((SELECT MAX(v."updated_at") FROM "fire_volunteers" v WHERE v."fire_id" = f."id"), to_timestamp(0)),
+        COALESCE((SELECT MAX(m."created_at") FROM "zone_members" m WHERE m."fire_id" = f."id"), to_timestamp(0)),
+        COALESCE((SELECT MAX(u."used_at") FROM "fire_join_token_uses" u JOIN "fire_join_tokens" t ON t."id" = u."token_id" WHERE t."fire_id" = f."id"), to_timestamp(0)),
+        f."last_activity_at"
+      )
+      WHERE f."status" = 'active';
+    `);
+  } catch {}
+
+  // Deactivate fires with no activity for N days
+  try {
+    await db.execute(sql`
+      UPDATE "fires"
+      SET "status" = 'inactive', "deactivated_at" = now(), "updated_at" = now()
+      WHERE "status" = 'active' AND "last_activity_at" < now() - (${days}::text || ' days')::interval;
+    `);
+  } catch {}
+}
+
 export async function listFires(limit = 500) {
   const max = Math.min(Math.max(limit, 1), 2000);
   async function run() {
-    const rows = await db.select().from(fires).orderBy(desc(fires.createdAt)).limit(max);
+    // best-effort maintenance pass
+    await autoDeactivateStaleFires();
+
+    const rows = await db
+      .select()
+      .from(fires)
+      .where(eq(fires.status, "active"))
+      .orderBy(desc(fires.createdAt))
+      .limit(max);
     // attach volunteer counts per fire
     const counts = await db
       .select({
@@ -152,6 +210,7 @@ export async function createFire(form: FormData) {
       radiusM,
       status: "active",
       createdBy: local.id,
+      lastActivityAt: new Date(),
     })
     .returning();
 
@@ -193,6 +252,8 @@ export async function claimVolunteer(form: FormData) {
     // keep requested; if already confirmed, no change
   }
 
+  await touchFireActivity(fireId);
+
   revalidatePath(`/fires/${fireId}`);
   return { ok: true };
 }
@@ -228,6 +289,7 @@ export async function approveVolunteer(form: FormData) {
   // Auto-join approved user into Sendbird channel
   await ensureSendbirdJoined(fireId, userId);
 
+  await touchFireActivity(fireId);
   revalidatePath(`/fires/${fireId}`);
   return { ok: true };
 }
@@ -302,5 +364,27 @@ export async function joinWithToken(fireId: number, token: string) {
   } catch {}
   // Auto-join into Sendbird channel
   await ensureSendbirdJoined(fireId, local.id);
+  await touchFireActivity(fireId);
   return { ok: true };
+}
+
+// ----- My inactive fires -----
+export async function listMyInactiveFires() {
+  const session = await auth0.getSession();
+  const u = session?.user;
+  if (!u?.email) return [] as any[];
+  const [local] = await db.select().from(users).where(eq(users.email, u.email)).limit(1);
+  if (!local) return [] as any[];
+  const rows = await db
+    .select()
+    .from(fires)
+    .where(eq(fires.status, 'inactive'))
+    .orderBy(desc(fires.deactivatedAt), desc(fires.createdAt));
+  // filter by confirmed membership
+  const mine = await db
+    .select({ fireId: fireVolunteers.fireId })
+    .from(fireVolunteers)
+    .where(and(eq(fireVolunteers.userId, local.id), eq(fireVolunteers.status, 'confirmed')));
+  const mySet = new Set(mine.map((m) => m.fireId));
+  return rows.filter((r) => mySet.has(r.id));
 }

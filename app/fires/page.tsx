@@ -18,6 +18,12 @@ export default async function FiresPage() {
     updatedAt: typeof f.updatedAt === "string" ? f.updatedAt : new Date(f.updatedAt).toISOString(),
   }));
 
-  return <HomeClient initialFires={initialFires as any} createAction={createFire} />;
+  return (
+    <>
+      <div className="max-w-6xl mx-auto w-full px-4 pt-4">
+        <a href="/fires/past" className="text-sm underline text-muted-foreground">Виж минали (неактивни) пожари</a>
+      </div>
+      <HomeClient initialFires={initialFires as any} createAction={createFire} />
+    </>
+  );
 }
-

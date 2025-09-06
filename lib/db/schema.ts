@@ -73,6 +73,8 @@ export const fires = pgTable(
     createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).defaultNow().notNull(),
+    deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
   },
   (t) => ({
     createdAtIdx: index('fires_created_at_idx').on(t.createdAt),
@@ -96,6 +98,8 @@ export type Fire = {
   createdBy: number | null;
   createdAt: Date;
   updatedAt: Date;
+  lastActivityAt: Date;
+  deactivatedAt: Date | null;
 };
 
 // ---------- NEW: Volunteers ----------
@@ -288,5 +292,21 @@ export const fireJoinTokenUses = pgTable(
   (t) => ({
     tokenIdx: index('fire_join_token_uses_token_idx').on(t.tokenId),
     userIdx: index('fire_join_token_uses_user_idx').on(t.userId),
+  })
+);
+
+// ---------- Fire Deactivation Votes ----------
+export const fireDeactivationVotes = pgTable(
+  'fire_deactivation_votes',
+  {
+    id: serial('id').primaryKey(),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueVote: uniqueIndex('fire_deactivation_votes_unique').on(t.fireId, t.userId),
+    fireIdx: index('fire_deactivation_votes_fire_idx').on(t.fireId),
+    userIdx: index('fire_deactivation_votes_user_idx').on(t.userId),
   })
 );

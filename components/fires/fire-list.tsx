@@ -36,15 +36,17 @@ function timeAgo(dateStr: string) {
 export default function FireList({
   fires,
   onFocus,
+  title = "Докладвани пожари",
 }: {
   fires: FireListItem[];
   onFocus?: (f: FireListItem) => void;
+  title?: string;
 }) {
   const map = useContext(MapContext)?.map ?? null;
 
   return (
     <div className="max-w-5xl mx-auto w-full px-4 pb-10">
-      <h2 className="text-xl font-semibold mb-3">Докладвани пожари</h2>
+      <h2 className="text-xl font-semibold mb-3">{title}</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {fires.map((f) => (
           <Card key={f.id} className="overflow-hidden">

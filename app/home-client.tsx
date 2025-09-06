@@ -127,7 +127,7 @@ export default function HomeClient({
       </div>
 
       <div className="mt-6">
-        <FireList fires={fires} onFocus={(f) => setSelectedId(f.id)} />
+        <FireList fires={fires} onFocus={(f) => setSelectedId(f.id)} title="Активни пожари" />
       </div>
     </div>
   );
