@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GET as runNotifications } from '../webhooks/notifications/route';
+import { runNotificationsJob } from '@/lib/notifications/job';
 
 export const runtime = 'nodejs';
 
@@ -10,10 +10,15 @@ export async function GET(req: Request) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
-  // Trigger the notifications job directly
-  const fakeReq = new Request('http://localhost/api/webhooks/notifications');
-  const res = await runNotifications(fakeReq);
-  const json = await res.json();
-  return NextResponse.json({ ok: true, ran: json });
-}
+  const url = new URL(req.url);
+  const onlyIdParam = url.searchParams.get('subscriptionId') || url.searchParams.get('id');
+  const limitPerSourceParam = url.searchParams.get('limitPerSource');
+  const onlySubscriptionId = onlyIdParam ? Number(onlyIdParam) : undefined;
+  const limitPerSource = limitPerSourceParam ? Number(limitPerSourceParam) : undefined;
 
+  const result = await runNotificationsJob({
+    onlySubscriptionId,
+    limitPerSource,
+  });
+  return NextResponse.json(result);
+}
