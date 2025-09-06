@@ -13,8 +13,8 @@ export default function Home() {
       <div className="max-w-[1280px] mx-auto">
         <Feature />
         <FAQ />
-        <ContactForm />
       </div>
+      <ContactForm />
       <Footer />
     </div>
   );

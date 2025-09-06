@@ -126,15 +126,15 @@
 
 @layer utilities {
   .caption {
-    font-size: 1.25rem;
+    font-size: 20px;
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #119C59;
+    color: #832900;
   }
 
   .heading-one {
-    font-size: 3.375rem;
+    font-size: 54px;
     font-weight: 700;
     line-height: 110%;
     color: #21272A;
@@ -156,20 +156,55 @@
 
   .button-primary {
     padding: 24px 32px;
-    background-color: #119C59;
+    background-color: #DD6630;
     line-height: 1;
     font-size: 1.25rem;
     font-weight: 500;
   }
 
   .button-secondary {
-    padding: 24px 32px;
+    padding: 22px 32px;
     background-color: transparent;
     line-height: 1;
     font-size: 1.25rem;
     font-weight: 500;
-    color: #119C59;
-    border: 2px solid #119C59;
+    color: #DD6630;
+    border: 2px solid #DD6630;
+  }
+
+  .button-secondary:hover {
+    background-color: #ffffff;
+  }
+
+  .header-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #21272A;
+  }
+
+  @media screen and (max-width: 500px) {
+    .heading-one {
+      font-size: 36px;
+    }
+
+    .heading-two {
+      font-size: 28px;
+    }
+
+    .body-text {
+      font-size: 1rem;
+    }
+
+    .button-primary {
+      padding: 16px 24px;
+      font-size: 1rem;
+    }
+
+    .button-secondary {
+      padding: 14px 24px;
+      font-size: 1rem;
+    }
+    
   }
 }
 

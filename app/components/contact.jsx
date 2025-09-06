@@ -29,7 +29,7 @@ export default function ContactForm() {
   }
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-[#fff8ed] w-full">
       <div className="max-w-2xl mx-auto px-4 text-center">
         <p className="caption">
           Подкрепи каузата
@@ -50,8 +50,8 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Placeholder" {...field} />
+                  <FormControl className="bg-white">
+                    <Input placeholder="Placeholder" {...field}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -65,7 +65,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl>
+                  <FormControl className="bg-white">
                     <Input placeholder="Placeholder" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -80,7 +80,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl>
+                  <FormControl className="bg-white">
                     <Input placeholder="Placeholder" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -95,7 +95,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl>
+                  <FormControl className="bg-white">
                     <Input placeholder="Placeholder" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -110,7 +110,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl>
+                  <FormControl className="bg-white">
                     <Textarea placeholder="Placeholder" rows={4} {...field} />
                   </FormControl>
                   <FormMessage />

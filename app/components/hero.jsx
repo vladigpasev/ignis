@@ -1,44 +1,44 @@
 "use client";
 
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function Hero() {
   return (
-    <section className="bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-16 flex flex-col lg:flex-row items-center gap-10">
-        {/* Left Side - Image */}
-        <div className="flex-1 flex justify-center">
-          <Image
-            src="/img/hero.jpg" // replace with your image path
-            alt="Volunteer"
-            width={400}
-            height={400}
-            className="rounded-2xl object-cover"
-          />
-        </div>
+    <section className="relative w-full h-[600px] flex items-center justify-center">
+      {/* Background Image */}
+      <Image
+        src="/img/ai.jpg" // replace with your background image
+        alt="Firefighter"
+        fill
+        priority
+        className="opacity-20 object-cover"
+      />
 
-        {/* Right Side - Text */}
-        <div className="flex-1 text-center lg:text-left">
-          <p className="caption">
-            Обединени срещу пожарите
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-white/15" />
+
+      {/* Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 w-full">
+        <div className="max-w-2xl p-8 rounded-[12px]">
+          <p className="caption text-accent mb-2">
+            ОБЕДИНЕНИ СРЕЩУ ПОЖАРИТЕ
           </p>
-          <h1 className="heading-one mb-12">
+          <h1 className="heading-one mb-6">
             Стани доброволец в борбата с пожарите
           </h1>
-          <p className="body-text mb-16">
-            Всеки доброволец е ценен! С твоята помощ можем да реагираме по-бързо и да ограничим щетите от пожарите. 
-            Регистрирай се и стани част от екип, който се бори за природата и хората.
+          <p className="body-text text-foreground mb-8">
+            Всеки доброволец е ценен! С твоята помощ можем да реагираме по-бързо
+            и да ограничим щетите от пожарите. Регистрирай се и стани част от
+            екип, който се бори за природата и хората.
           </p>
 
           {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Button className="button-primary">
               Стани доброволец &rarr;
             </Button>
-            <Button
-              className="button-secondary"
-            >
+            <Button className="button-secondary">
               Вече си доброволец &rarr;
             </Button>
           </div>

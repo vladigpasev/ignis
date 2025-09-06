@@ -11,25 +11,25 @@ export default function Features() {
       title: "Спасените животни на Анна",
       description:
         "След опустошителния пожар в района на Витоша, Анна и нейният екип успяха да евакуират и осигурят подслон на над 50 домашни и диви животни.",
-      image: "/placeholder.svg",
+      image: "/img/deer.jpg",
     },
     {
       title: "Координацията на Петър",
       description:
         "Петър, бивш военен, доброволец в центъра за управление, координираше ресурсите така ефективно, че пожарът беше овладян преди да достигне до жилищните райони.",
-      image: "/placeholder.svg",
-    },
+      image: "/img/vladi.jpg",
+      },
     {
       title: "Младежката инициатива за засаждане",
       description:
         "Група младежи от Петрич организираха кампания за засаждане на 5000 дървета в изгорените земи, за да върнат живота там.",
-      image: "/placeholder.svg",
+      image: "/img/forest.jpg",
     },
     {
       title: "Екипът на Димитър",
       description:
         "Димитър и неговите колеги психолози предоставиха безплатна кризисна подкрепа на над 100 засегнати от пожарите семейства в първите 72 часа.",
-      image: "/placeholder.svg",
+      image: "/img/team.jpg",
     },
   ];
 
@@ -47,14 +47,14 @@ export default function Features() {
         {/* Feature Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {features.map((feature, index) => (
-            <Card key={index} className="flex flex-col">
+            <Card key={index} className="flex flex-col pt-0">
               <CardHeader className="p-0">
                 <Image
                   src={feature.image}
                   alt={feature.title}
                   width={300}
                   height={200}
-                  className="w-full h-40 object-cover bg-gray-200"
+                  className="w-full h-40 object-cover bg-gray-200 rounded-t-[12px]"
                 />
               </CardHeader>
               <CardContent className="p-4 flex-1 text-left">
@@ -64,7 +64,7 @@ export default function Features() {
               <CardFooter className="p-4">
                 <Button
                   variant="link"
-                  className="text-[#119C59] font-medium p-0"
+                  className="text-[#DD6630] font-medium"
                 >
                   Още информация <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
