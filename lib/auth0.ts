@@ -12,6 +12,8 @@ import { getAppBaseUrl } from "./env";
 export const auth0 = new Auth0Client({
   // Ensure Auth0 uses the correct base URL in all environments
   appBaseUrl: getAppBaseUrl(),
+  // Default destination after successful login when no returnTo is provided
+  signInReturnToPath: "/fires",
   authorizationParameters: {
     ...(process.env.AUTH0_SCOPE ? { scope: process.env.AUTH0_SCOPE } : {}),
     ...(process.env.AUTH0_AUDIENCE &&
