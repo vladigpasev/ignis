@@ -6,14 +6,18 @@ import { and, eq } from "drizzle-orm";
 
 export const runtime = "nodejs";
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  _req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await context.params;
     const session = await auth0.getSession();
     const authUser = session?.user;
     if (!authUser?.email) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
-    const subId = Number(params.id);
+    const subId = Number(id);
     if (!Number.isFinite(subId)) {
       return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
     }
@@ -38,4 +42,3 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ ok: false, error: e?.message || "Server error" }, { status: 500 });
   }
 }
-

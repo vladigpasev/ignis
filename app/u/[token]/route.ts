@@ -5,9 +5,12 @@ import { eq } from "drizzle-orm";
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: Request, { params }: { params: { token: string } }) {
+export async function GET(
+  _req: Request,
+  context: { params: Promise<{ token: string }> }
+) {
   try {
-    const token = params.token;
+    const { token } = await context.params;
     if (!token || token.length < 8) {
       return new NextResponse('Invalid unsubscribe link', { status: 400 });
     }
@@ -52,4 +55,3 @@ export async function GET(_req: Request, { params }: { params: { token: string }
     return new NextResponse('Грешка при обработката на абонамента', { status: 500 });
   }
 }
-
