@@ -5,6 +5,9 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList, NavigationMenuLink } from "@/components/ui/navigation-menu";
 import AuthNav from "./auth-nav";
+import dynamic from "next/dynamic";
+
+const SubscribeModal = dynamic(() => import("./subscribe-modal"), { ssr: false });
 
 export default function Header() {
   return (
@@ -32,6 +35,11 @@ export default function Header() {
               <NavigationMenuLink asChild className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}>
                 <Link href="#">Twelve</Link>
               </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <div className={cn("px-2 py-1")}> 
+                <SubscribeModal />
+              </div>
             </NavigationMenuItem>
             <NavigationMenuItem>
               {/* Auth navigation renders its own <a> elements; do not nest in Link */}

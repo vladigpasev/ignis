@@ -12,6 +12,43 @@ import {
 import { relations } from 'drizzle-orm';
 import { jsonb } from 'drizzle-orm/pg-core';
 
+// ---------- NOTIFICATIONS (Subscriptions & Deliveries) ----------
+export const notificationSubscriptions = pgTable(
+  'notification_subscriptions',
+  {
+    id: serial('id').primaryKey(),
+    email: varchar('email', { length: 255 }),
+    phone: varchar('phone', { length: 32 }),
+    lat: doublePrecision('lat').notNull(),
+    lng: doublePrecision('lng').notNull(),
+    radiusKm: integer('radius_km').notNull().default(15),
+    sourceFirms: integer('source_firms').notNull().default(1), // 1=true, 0=false (bool-like)
+    sourceReports: integer('source_reports').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    emailIdx: index('notif_sub_email_idx').on(t.email),
+    phoneIdx: index('notif_sub_phone_idx').on(t.phone),
+    coordIdx: index('notif_sub_coord_idx').on(t.lat, t.lng),
+  })
+);
+
+export const notificationDeliveries = pgTable(
+  'notification_deliveries',
+  {
+    id: serial('id').primaryKey(),
+    subscriptionId: integer('subscription_id').notNull().references(() => notificationSubscriptions.id, { onDelete: 'cascade' }),
+    eventKey: varchar('event_key', { length: 256 }).notNull(),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }).defaultNow().notNull(),
+    meta: jsonb('meta'),
+  },
+  (t) => ({
+    uniqueDelivery: uniqueIndex('notif_delivery_sub_event_unique').on(t.subscriptionId, t.eventKey),
+    subIdx: index('notif_delivery_sub_idx').on(t.subscriptionId),
+  })
+);
+
 export const users = pgTable(
   'users',
   {

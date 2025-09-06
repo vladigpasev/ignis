@@ -22,6 +22,13 @@
       "when": 1757001000000,
       "tag": "0002_wild_volunteers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1757155627374,
+      "tag": "0003_free_johnny_storm",
+      "breakpoints": true
     }
   ]
 }
