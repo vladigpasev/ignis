@@ -33,11 +33,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .leftJoin(users, eq(users.id, zoneMembers.userId))
     .where(and(eq(zoneMembers.zoneId, z)));
 
-  const gallery = await db
-    .select()
+  // Single cover image (most recent uploaded)
+  const coverRow = await db
+    .select({ url: zoneGalleryImages.url })
     .from(zoneGalleryImages)
     .where(eq(zoneGalleryImages.zoneId, z))
-    .orderBy(desc(zoneGalleryImages.createdAt));
+    .orderBy(desc(zoneGalleryImages.createdAt))
+    .limit(1);
 
   const updates = await db
     .select({
@@ -88,7 +90,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     ok: true,
     zone: zone[0],
     members,
-    gallery,
+    coverUrl: coverRow[0]?.url || null,
     updates: updates.map((u) => ({ ...u, images: imagesMap[u.id] || [] })),
     myZoneId,
     isMember: myZoneId != null && myZoneId === z,
@@ -101,7 +103,55 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const fireId = Number(id);
   const z = Number(zoneId);
 
-  const { addGalleryImage } = (await req.json().catch(() => ({}))) as any;
+  const body = (await req.json().catch(() => ({}))) as any;
+  const { addGalleryImage, setCoverImage, title, description } = body || {};
+
+  // Update zone metadata (title/description)
+  if (title !== undefined || description !== undefined) {
+    const session = await auth0.getSession();
+    const email = session?.user?.email;
+    if (!email) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    const u = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const me = u[0];
+    if (!me) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    const row = await db
+      .select()
+      .from(fireVolunteers)
+      .where(and(eq(fireVolunteers.fireId, fireId), eq(fireVolunteers.userId, me.id), eq(fireVolunteers.status, "confirmed")))
+      .limit(1);
+    if (!row.length) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+
+    const newTitle = (title ?? "").toString().trim().slice(0, 120) || null;
+    const newDesc = (description ?? "").toString().trim().slice(0, 4000) || null;
+    await db
+      .update(zones)
+      .set({ title: newTitle, description: newDesc, updatedAt: new Date() })
+      .where(and(eq(zones.id, z), eq(zones.fireId, fireId)));
+    return NextResponse.json({ ok: true });
+  }
+
+  // Add gallery image
+  if (setCoverImage?.url && setCoverImage?.key) {
+    const session = await auth0.getSession();
+    const email = session?.user?.email;
+    if (!email) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    const u = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const me = u[0];
+    if (!me) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    const row = await db
+      .select()
+      .from(fireVolunteers)
+      .where(and(eq(fireVolunteers.fireId, fireId), eq(fireVolunteers.userId, me.id), eq(fireVolunteers.status, "confirmed")))
+      .limit(1);
+    if (!row.length) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    // Insert new cover image record (most recent is used as cover)
+    await db
+      .insert(zoneGalleryImages)
+      .values({ zoneId: z, userId: me.id, s3Key: setCoverImage.key, url: setCoverImage.url });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Backward compatibility: treat addGalleryImage as setting cover
   if (addGalleryImage?.url && addGalleryImage?.key) {
     const session = await auth0.getSession();
     const email = session?.user?.email;

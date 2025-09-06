@@ -10,6 +10,8 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Users, ArrowLeft, Image as ImageIcon, MessageCircle, X } from "lucide-react";
 import { circlePolygon } from "@/lib/geo";
 import ImageUploader from "@/components/uploads/image-uploader";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const STYLE = "satellite-streets-v12";
@@ -44,7 +46,7 @@ export default function ZoneDetailsClient({
     ok: true;
     zone: any;
     members: { userId: number; name: string | null; email: string; joinedAt: string }[];
-    gallery: { id: number; url: string }[];
+    coverUrl?: string | null;
     updates: { id: number; text: string | null; createdAt: string; userId: number; name: string | null; email: string; images: any[] }[];
     myZoneId?: number | null;
     isMember?: boolean;
@@ -55,6 +57,10 @@ export default function ZoneDetailsClient({
   const z = data.zone;
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [metaTitle, setMetaTitle] = useState<string>(z.title || "");
+  const [metaDesc, setMetaDesc] = useState<string>(z.description || "");
+  const [savingMeta, setSavingMeta] = useState(false);
 
   const join = async () => {
     setJoining(true);
@@ -90,7 +96,7 @@ export default function ZoneDetailsClient({
     }
   };
 
-  const cover = data.gallery?.[0]?.url || buildStaticMapPreview(z);
+  const cover = data.coverUrl || buildStaticMapPreview(z);
   const isMember = !!data.isMember;
   const inAnotherZone = data.myZoneId != null && data.myZoneId !== zoneId;
   const [chatOpen, setChatOpen] = useState(false);
@@ -165,6 +171,23 @@ export default function ZoneDetailsClient({
     location.reload();
   }
 
+  async function saveMeta() {
+    setSavingMeta(true);
+    try {
+      const res = await fetch(`/api/fires/${fireId}/zones/${zoneId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: metaTitle, description: metaDesc }),
+      }).then((r) => r.json());
+      if (!res?.ok) throw new Error(res?.error || "Грешка при запис на зоната");
+      location.reload();
+    } catch (e: any) {
+      alert(e?.message || "Грешка");
+    } finally {
+      setSavingMeta(false);
+    }
+  }
+
   return (
     <div className="max-w-6xl mx-auto w-full px-4 py-6">
       <div className="mb-4">
@@ -186,15 +209,70 @@ export default function ZoneDetailsClient({
         )}
 
         <CardHeader>
-          <CardTitle className="flex items-center justify-between flex-wrap gap-2">
-            <span>{z.title || `Зона #${z.id}`}</span>
-            <Badge variant="secondary" className="whitespace-nowrap">
-              <Users className="h-3.5 w-3.5 mr-1" />
-              {data.members.length} член(а)
-            </Badge>
+          <CardTitle className="flex items-center justify-between flex-wrap gap-2 w-full">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {editingMeta ? (
+                <Input
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
+                  placeholder={`Зона #${z.id}`}
+                  maxLength={120}
+                />
+              ) : (
+                <span className="truncate">{z.title || `Зона #${z.id}`}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="whitespace-nowrap">
+                <Users className="h-3.5 w-3.5 mr-1" />
+                {data.members.length} член(а)
+              </Badge>
+              {canEdit && !editingMeta && (
+                <Button size="sm" variant="outline" onClick={() => setEditingMeta(true)}>Редактирай</Button>
+              )}
+              {canEdit && editingMeta && (
+                <>
+                  <Button size="sm" onClick={saveMeta} disabled={savingMeta}>{savingMeta ? "Запис…" : "Запази"}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingMeta(false); setMetaTitle(z.title || ""); setMetaDesc(z.description || ""); }}>
+                    Отказ
+                  </Button>
+                </>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+          <CardContent className="space-y-4">
+            {canEdit && editingMeta && (
+              <div className="grid gap-2">
+                <label className="text-sm text-muted-foreground">Описание</label>
+                <Textarea
+                  value={metaDesc}
+                  onChange={(e) => setMetaDesc(e.target.value)}
+                  maxLength={4000}
+                  placeholder="Добавете кратко описание на зоната…"
+                />
+                <div className="grid gap-2 pt-2">
+                  <label className="text-sm text-muted-foreground">Корица</label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={cover} alt="Корица" className="h-[72px] w-[128px] object-cover rounded-md border" />
+                    ) : null}
+                    <ImageUploader
+                      prefix={`fires/${fireId}/zones/${zoneId}/cover`}
+                      onUploaded={async (f) => {
+                        await fetch(`/api/fires/${fireId}/zones/${zoneId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ setCoverImage: { url: f.url, key: f.key } }),
+                        });
+                        location.reload();
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           {!isMember && (
             <div className="rounded-md border p-4 bg-muted/30">
               {inAnotherZone ? (
@@ -224,7 +302,7 @@ export default function ZoneDetailsClient({
               )}
             </div>
           )}
-          {isMember ? (
+          {isMember && !editingMeta ? (
             z.description ? (
               <p className="text-muted-foreground">{z.description}</p>
             ) : (
@@ -242,36 +320,7 @@ export default function ZoneDetailsClient({
 
           {isMember && <Separator />}
 
-          {isMember && (
-          <div className="grid gap-3">
-            <div className="text-sm font-medium">Галерия</div>
-            {canEdit && (
-              <div className="pb-2">
-                <ImageUploader
-                  prefix={`fires/${fireId}/zones/${zoneId}/gallery`}
-                  onUploaded={async (f) => {
-                    await fetch(`/api/fires/${fireId}/zones/${zoneId}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ addGalleryImage: { url: f.url, key: f.key } }),
-                    });
-                    location.reload();
-                  }}
-                />
-              </div>
-            )}
-            {data.gallery.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Няма снимки.</div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {data.gallery.map((g) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={g.id} src={g.url} alt="" className="w-full h-[140px] object-cover rounded-md border" />
-                ))}
-              </div>
-            )}
-          </div>
-          )}
+          {/* Gallery removed; single cover image only */}
 
           {isMember && <Separator />}
 
