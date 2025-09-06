@@ -3,8 +3,7 @@ import { fires, notificationDeliveries, notificationSubscriptions } from "@/lib/
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { haversineMeters } from "@/lib/geo";
 import { buildReportEmail, buildReportSms, sendEmail, sendSms } from "@/lib/notify";
-
-const DEFAULT_BASE_URL = process.env.APP_BASE_URL || 'https://firelinks.org';
+import { getAppBaseUrl } from "@/lib/env";
 
 function degRadius(lat: number, radiusM: number) {
   const latDeg = radiusM / 111_320;
@@ -39,7 +38,7 @@ function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 export async function runNotificationsJob({
   onlySubscriptionId,
   limitPerSource = Number.POSITIVE_INFINITY,
-  baseUrl = DEFAULT_BASE_URL,
+  baseUrl = getAppBaseUrl(),
 }: {
   onlySubscriptionId?: number,
   limitPerSource?: number,

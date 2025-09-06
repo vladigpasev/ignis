@@ -8,6 +8,7 @@ import {
   generateJoinToken,
 } from "@/app/actions/fires";
 import FireDetailsClient from "./client";
+import { getAppBaseUrl } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const revalidate = 0;
@@ -23,7 +24,7 @@ export default async function FireDetailPage({ params }: { params: Promise<{ id:
   const { confirmed, requested } = await volunteersForFire(fireId);
   const viewerStatus = await myVolunteerStatus(fireId);
 
-  const joinBaseUrl = process.env.APP_BASE_URL || "";
+  const joinBaseUrl = getAppBaseUrl();
 
   return (
     <FireDetailsClient

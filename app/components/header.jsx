@@ -3,15 +3,13 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Phone, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuList,
-  NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
-import AuthNav from "./auth-nav";
 import dynamic from "next/dynamic";
 
 const SubscribeModal = dynamic(() => import("./subscribe-modal"), { ssr: false });
@@ -33,7 +31,7 @@ export default function Header() {
           <span className="text-[24px] font-bold text-foreground">FireLinks</span>
         </Link>
 
-        {/* Desktop Navigation + Phone + Actions */}
+        {/* Desktop Navigation + Actions */}
         <div className="hidden md:flex items-center gap-[21px]">
           <nav className="flex items-center gap-8">
             <Link
@@ -56,41 +54,12 @@ export default function Header() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-foreground" />
-            <span className="text-[18px] font-bold text-primary">
-              0700 00 000
-            </span>
-          </div>
-
           {/* Actions */}
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn("px-4 py-2 text-foreground/80 hover:text-foreground transition-colors")}
-                >
-                  <Link href="#">Eleven</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn("px-4 py-2 text-foreground/80 hover:text-foreground transition-colors")}
-                >
-                  <Link href="#">Twelve</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
                 <div className={cn("px-2 py-1")}>
                   <SubscribeModal />
-                </div>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                {/* Auth navigation renders its own <a> elements; do not nest in Link */}
-                <div className={cn("px-5 py-2")}>
-                  <AuthNav />
                 </div>
               </NavigationMenuItem>
             </NavigationMenuList>
@@ -129,11 +98,9 @@ export default function Header() {
           >
             Подкрепи
           </Link>
-          <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-foreground" />
-            <span className="text-[18px] font-bold text-primary">
-              0700 00 000
-            </span>
+          {/* Subscribe CTA for mobile */}
+          <div>
+            <SubscribeModal />
           </div>
         </div>
       )}

@@ -1,7 +1,8 @@
+import { getAppBaseUrl } from "@/lib/env";
 
 const BASE = process.env.SENDBIRD_API_BASE_URL!;
 const TOKEN = process.env.SENDBIRD_API_TOKEN!;
-const APP_BASE = process.env.APP_BASE_URL || "";
+const APP_BASE = getAppBaseUrl();
 
 if (!BASE || !TOKEN) {
   // eslint-disable-next-line no-console

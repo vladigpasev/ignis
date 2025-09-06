@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { BellRing } from "lucide-react";
 import MapProvider from "@/lib/mapbox/provider";
 import { useMap } from "@/context/map-context";
 import type mapboxgl from "mapbox-gl";
@@ -161,7 +162,13 @@ export default function SubscribeModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">Получавай известия</Button>
+        <Button
+          size="lg"
+          className="rounded-full px-5 py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white shadow-md hover:shadow-lg hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 transition-all"
+        >
+          <BellRing className="w-4 h-4" />
+          Получавай известия
+        </Button>
       </DialogTrigger>
       <DialogContent className="w-[96vw] max-w-[1040px] p-0 overflow-hidden">
         <div className="grid md:grid-cols-[2fr_1fr] gap-0 md:h-[80vh] md:max-h-[860px]">
