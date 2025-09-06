@@ -7,15 +7,27 @@ export function getAppBaseUrl(): string {
     if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin.replace(/\/$/, '');
   }
 
-  // Server-side: prefer explicit APP_BASE_URL, then NEXT_PUBLIC_*, then Vercel URL
+  // Server-side: prefer sane production defaults, avoid localhost in prod
   const envBase = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL;
-  if (envBase && envBase.length) return envBase.replace(/\/$/, '');
-
   const vercelUrl = process.env.VERCEL_URL;
-  if (vercelUrl && vercelUrl.length) {
-    const withProto = vercelUrl.startsWith('http') ? vercelUrl : `https://${vercelUrl}`;
-    return withProto.replace(/\/$/, '');
+  const vercelBase = vercelUrl && vercelUrl.length
+    ? (vercelUrl.startsWith('http') ? vercelUrl : `https://${vercelUrl}`)
+    : undefined;
+
+  // In production: if envBase points to localhost, prefer Vercel domain when available
+  if (process.env.NODE_ENV === 'production') {
+    if (vercelBase) {
+      if (!envBase) return vercelBase.replace(/\/$/, '');
+      const lower = envBase.toLowerCase();
+      if (lower.includes('localhost') || lower.includes('127.0.0.1')) {
+        return vercelBase.replace(/\/$/, '');
+      }
+    }
   }
+
+  // Otherwise, trust explicit env, then Vercel URL
+  if (envBase && envBase.length) return envBase.replace(/\/$/, '');
+  if (vercelBase) return vercelBase.replace(/\/$/, '');
 
   // Fallback for local dev
   return 'http://localhost:3000';
@@ -28,4 +40,3 @@ export function withBase(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
   return `${base}${p}`;
 }
-
