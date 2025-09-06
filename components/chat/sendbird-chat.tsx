@@ -7,7 +7,6 @@ import dynamic from "next/dynamic";
 const SendBirdProvider = dynamic(() => import("@sendbird/uikit-react").then(m => m.SendBirdProvider), { ssr: false }) as any;
 const Channel = dynamic(() => import("@sendbird/uikit-react").then(m => m.Channel), { ssr: false }) as any;
 const ChannelSettings = dynamic(() => import("@sendbird/uikit-react").then(m => m.ChannelSettings), { ssr: false }) as any;
-import "@sendbird/uikit-react/dist/index.css";
 
 type ConnectInfo = {
   ok: boolean;
