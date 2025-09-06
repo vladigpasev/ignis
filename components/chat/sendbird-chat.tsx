@@ -19,7 +19,7 @@ type ConnectInfo = {
   error?: string;
 };
 
-export default function SendbirdChat({ fireId }: { fireId: number }) {
+export default function SendbirdChat({ fireId, connectUrl }: { fireId?: number; connectUrl?: string }) {
   const [info, setInfo] = useState<ConnectInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -28,7 +28,9 @@ export default function SendbirdChat({ fireId }: { fireId: number }) {
     let canceled = false;
     (async () => {
       try {
-        const j: ConnectInfo = await fetch(`/api/fires/${fireId}/chat/connect`, { cache: "no-store" }).then(r => r.json());
+        const url = connectUrl || (fireId != null ? `/api/fires/${fireId}/chat/connect` : "");
+        if (!url) throw new Error("Missing connectUrl");
+        const j: ConnectInfo = await fetch(url, { cache: "no-store" }).then(r => r.json());
         if (canceled) return;
         if (!j?.ok) {
           setError(j?.error || "Грешка при свързване със Sendbird.");

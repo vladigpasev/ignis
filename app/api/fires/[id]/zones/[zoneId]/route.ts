@@ -65,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   // Determine viewer's membership for this fire (if logged in)
   let myZoneId: number | null = null;
+  let viewerUserId: number | null = null;
   try {
     const session = await auth0.getSession();
     const email = session?.user?.email;
@@ -72,6 +73,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       const u = await db.select().from(users).where(eq(users.email, email)).limit(1);
       const me = u[0];
       if (me) {
+        viewerUserId = me.id;
         const row = await db
           .select({ zoneId: zoneMembers.zoneId })
           .from(zoneMembers)
@@ -90,6 +92,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     updates: updates.map((u) => ({ ...u, images: imagesMap[u.id] || [] })),
     myZoneId,
     isMember: myZoneId != null && myZoneId === z,
+    viewerUserId,
   });
 }
 

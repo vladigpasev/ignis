@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { zones, zoneMembers, users, fireVolunteers } from "@/lib/db/schema";
+import { ensureSbUser, getOrCreateZoneChannel, joinUserToChannel } from "@/lib/sendbird";
 import { auth0 } from "@/lib/auth0";
 import { and, eq } from "drizzle-orm";
 
@@ -53,6 +54,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         set: { zoneId: z },
       });
 
+    // Auto-join Sendbird zone channel (best-effort)
+    try {
+      const sbUid = `user-${me.id}`;
+      await ensureSbUser(sbUid, me.name || me.email);
+      const channelUrl = await getOrCreateZoneChannel(fireId, z, exists[0]?.title ?? null);
+      await joinUserToChannel(channelUrl, sbUid);
+    } catch (e) {
+      console.warn("[sendbird] auto-join zone failed", (e as any)?.message);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     const msg = e?.message || "Error";
@@ -60,4 +71,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }
-

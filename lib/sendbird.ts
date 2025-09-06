@@ -42,6 +42,10 @@ export function fireChannelUrl(fireId: number) {
   return `fire-${fireId}`;
 }
 
+export function zoneChannelUrl(fireId: number, zoneId: number) {
+  return `fire-${fireId}-zone-${zoneId}`;
+}
+
 export async function ensureSbUser(id: string, nickname: string | null | undefined): Promise<SBUser> {
   const profileUrl = `${APP_BASE}/vercel.svg`;
   // Try fetch
@@ -88,6 +92,27 @@ export async function getOrCreateFireChannel(fireId: number) {
   }
 }
 
+export async function getOrCreateZoneChannel(fireId: number, zoneId: number, zoneTitle?: string | null) {
+  const channelUrl = zoneChannelUrl(fireId, zoneId);
+  try {
+    await sbFetch(`/v3/group_channels/${encodeURIComponent(channelUrl)}`);
+    return channelUrl;
+  } catch {
+    await sbFetch(`/v3/group_channels`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: zoneTitle ? `Зона: ${zoneTitle}` : `Zone #${zoneId}`,
+        channel_url: channelUrl,
+        is_distinct: false,
+        custom_type: "zone",
+        data: JSON.stringify({ fireId, zoneId }),
+        is_public: false,
+      }),
+    });
+    return channelUrl;
+  }
+}
+
 export async function inviteUserToChannel(channelUrl: string, userId: string) {
   await sbFetch(`/v3/group_channels/${encodeURIComponent(channelUrl)}/invite`, {
     method: "POST",
@@ -96,21 +121,38 @@ export async function inviteUserToChannel(channelUrl: string, userId: string) {
 }
 
 export async function joinUserToChannel(channelUrl: string, userId: string) {
-  // Joins the channel to ensure immediate access to full history
+  // Preferred: invite then accept on behalf (using User-Id header)
+  try {
+    await sbFetch(`/v3/group_channels/${encodeURIComponent(channelUrl)}/invite`, {
+      method: "POST",
+      body: JSON.stringify({ user_ids: [userId] }),
+    });
+    const url = `${BASE}/v3/group_channels/${encodeURIComponent(channelUrl)}/accept`;
+    await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Api-Token": TOKEN,
+        "Content-Type": "application/json",
+        "User-Id": userId,
+      },
+    });
+    return;
+  } catch (_) {}
+  // Fallback: try force-add (may require supergroup)
+  try {
+    await sbFetch(`/v3/group_channels/${encodeURIComponent(channelUrl)}/members`, {
+      method: "POST",
+      body: JSON.stringify({ user_ids: [userId] }),
+    });
+    return;
+  } catch (_) {}
+  // Fallback: try join (works for public)
   try {
     await sbFetch(`/v3/group_channels/${encodeURIComponent(channelUrl)}/join`, {
       method: "POST",
       body: JSON.stringify({ user_id: userId }),
     });
-  } catch (e) {
-    // If join is disallowed, try adding as member directly
-    try {
-      await sbFetch(`/v3/group_channels/${encodeURIComponent(channelUrl)}/members`, {
-        method: "POST",
-        body: JSON.stringify({ user_ids: [userId] }),
-      });
-    } catch (_) {
-      // ignore; the user might already be joined
-    }
+  } catch (_) {
+    // ignore
   }
 }

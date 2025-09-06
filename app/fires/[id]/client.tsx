@@ -16,6 +16,7 @@ import ZoneDraw from "@/components/zones/zone-draw";
 import ZoneList from "@/components/zones/zone-list";
 import ZoneShapes from "@/components/zones/zone-shapes";
 import SendbirdChat from "@/components/chat/sendbird-chat";
+import { useSendbirdUnreadMany } from "@/hooks/useSendbirdUnreadMany";
 import type mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
 import { useSendbirdUnread } from "@/hooks/useSendbirdUnread";
@@ -93,7 +94,7 @@ export default function FireDetailsClient({
 
   // chat
   const [chatOpen, setChatOpen] = useState(false);
-  const { count: unreadCount } = useSendbirdUnread(fire.id, chatOpen);
+  const [activeChat, setActiveChat] = useState<"fire" | "zone">("fire");
   // local ref to map instance captured on load
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -201,6 +202,12 @@ export default function FireDetailsClient({
 
   const canEditZones = viewer === "confirmed";
   const myZone = useMemo(() => zones.find((z) => z.isMember), [zones]);
+  const fireConnect = `/api/fires/${fire.id}/chat/connect`;
+  const zoneConnect = myZone ? `/api/fires/${fire.id}/zones/${myZone.id}/chat/connect` : null;
+  const activeConnectUrl = (activeChat === "zone" && zoneConnect) ? zoneConnect : fireConnect;
+  const { total: unreadCount, counts } = useSendbirdUnreadMany([fireConnect, ...(zoneConnect ? [zoneConnect] : [])], chatOpen, activeConnectUrl);
+  const fireUnread = counts?.[fireConnect] || 0;
+  const zoneUnread = zoneConnect ? (counts?.[zoneConnect] || 0) : 0;
 
   // Compute and constrain map view to the fire area (zones + vicinity)
   useEffect(() => {
@@ -480,27 +487,38 @@ export default function FireDetailsClient({
 
       {/* Floating Chat Panel (fixed, doesn't move the button) */}
       {chatOpen && (
-        <div className="fixed bottom-24 right-4 z-30 w-[min(380px,90vw)] max-h-[70vh] bg-background/95 backdrop-blur border rounded-lg shadow-xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium">Общ чат</div>
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-30 w-[min(420px,calc(100vw-1rem))] max-h-[70vh] bg-background/95 backdrop-blur border rounded-xl shadow-xl p-3">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="inline-flex p-0.5 bg-muted rounded-full">
+              <Button size="sm" variant={activeChat === "fire" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("fire")}>
+                Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
+              </Button>
+              <Button size="sm" variant={activeChat === "zone" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("zone")} disabled={!zoneConnect}>
+                Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
+              </Button>
+            </div>
             <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <SendbirdChat fireId={fire.id} />
+          {activeChat === "fire" && <SendbirdChat connectUrl={fireConnect} />}
+          {activeChat === "zone" && zoneConnect && <SendbirdChat connectUrl={zoneConnect} />}
+          {activeChat === "zone" && !zoneConnect && (
+            <div className="text-sm text-muted-foreground py-10 text-center">Не сте член на зона. Влезте в зона, за да видите чат.</div>
+          )}
         </div>
       )}
 
       {/* Unread pill (fixed near the button, no layout shift) */}
       {!chatOpen && unreadCount > 0 && (
-        <div className="fixed bottom-6 right-24 z-30">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-24 z-30 max-w-[calc(100vw-1rem)]">
           <button
             type="button"
             onClick={() => setChatOpen(true)}
             className="rounded-full bg-primary text-primary-foreground px-3 py-1.5 shadow-lg hover:opacity-95 transition"
             title="Отвори чата"
           >
-            Имаш {unreadCount} непрочетени съобщения
+            Имаш {unreadCount} непрочетени — Общ: {fireUnread}{zoneConnect ? `, Зона: ${zoneUnread}` : ""}
           </button>
         </div>
       )}
