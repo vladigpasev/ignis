@@ -126,14 +126,15 @@ export async function runNotificationsJob({
         for (const h of hotspots) {
           const d = haversineMeters({ lat: sub.lat, lng: sub.lng }, { lat: h.lat, lng: h.lng });
           if (d > radiusM) continue;
-          // Stable-ish dedupe key for FIRMS: quantized cell + 6h time bucket
+          // Stable dedupe key for FIRMS: quantized cell (no time bucket)
           const qLat = Math.round(h.lat * 50) / 50; // ~0.02° ≈ 2.2 km
           const qLng = Math.round(h.lng * 50) / 50;
           const ts = h.acquiredAt ? Date.parse(h.acquiredAt) : NaN;
           const bucket6h = Number.isFinite(ts) ? Math.floor(ts / (6 * 3600 * 1000)) : undefined;
-          const eventKey = bucket6h !== undefined
-            ? `firms:${qLat.toFixed(2)},${qLng.toFixed(2)}:b${bucket6h}`
-            : `firms:${qLat.toFixed(2)},${qLng.toFixed(2)}`;
+          // Previously we used a 6h time bucket which could resend
+          // multiple notifications for the same location across runs.
+          // Now we drop the time bucket so each location notifies once.
+          const eventKey = `firms:${qLat.toFixed(2)},${qLng.toFixed(2)}`;
           totalCandidates++;
           if (await alreadyDelivered(sub.id, eventKey)) continue;
 
