@@ -29,25 +29,26 @@ export default function SendbirdChat({ fireId, connectUrl }: { fireId?: number; 
     (async () => {
       try {
         const url = connectUrl || (fireId != null ? `/api/fires/${fireId}/chat/connect` : "");
-        if (!url) throw new Error("Missing connectUrl");
+        if (!url) throw new Error("Липсва connectUrl");
         const j: ConnectInfo = await fetch(url, { cache: "no-store" }).then(r => r.json());
         if (canceled) return;
         if (!j?.ok) {
-          setError(j?.error || "Грешка при свързване със Sendbird.");
+          setError(j?.error || "Грешка при свързване към Sendbird.");
           return;
         }
         setInfo(j);
       } catch (e: any) {
-        if (!canceled) setError(e?.message || "Грешка при свързване със Sendbird.");
+        if (!canceled) setError(e?.message || "Грешка при свързване към Sendbird.");
       }
     })();
     return () => { canceled = true; };
-  }, [fireId]);
+  }, [fireId, connectUrl]);
 
   const content = useMemo(() => {
     if (error) return <div className="text-sm text-red-500">{error}</div>;
     if (!info) return <div className="text-sm text-muted-foreground">Зареждане…</div>;
-    if (!info.appId || !info.userId || !info.channelUrl) return <div className="text-sm text-red-500">Липсва конфигурация за Sendbird.</div>;
+    if (!info.appId || !info.userId || !info.channelUrl)
+      return <div className="text-sm text-red-500">Липсват данни за свързване към Sendbird.</div>;
 
     return (
       <div style={{ height: '60vh', overflow: 'visible' }}>
@@ -72,7 +73,7 @@ export default function SendbirdChat({ fireId, connectUrl }: { fireId?: number; 
         </SendBirdProvider>
       </div>
     );
-  }, [info, error]);
+  }, [info, error, settingsOpen]);
 
   return (
     <div className="sb-wrapper">{content}</div>

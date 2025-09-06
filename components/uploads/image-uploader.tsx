@@ -27,7 +27,7 @@ export default function ImageUploader({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prefix, contentType: ct, ext }),
         }).then((r) => r.json());
-        if (!p?.ok) throw new Error(p?.error || "presign failed");
+        if (!p?.ok) throw new Error(p?.error || "Грешка при пресайна.");
         // Include ACL header to match the presigned request (server signs with ACL: public-read)
         const putRes = await fetch(p.url, {
           method: "PUT",
@@ -37,8 +37,7 @@ export default function ImageUploader({
         if (!putRes.ok) {
           let details = "";
           try { details = await putRes.text(); } catch {}
-          const msg = `S3 upload failed (${putRes.status})${details ? ": " + details.slice(0, 200) : ""}`;
-          // Helpful console for debugging
+          const msg = `Неуспешно качване (${putRes.status})${details ? ": " + details.slice(0, 200) : ""}`;
           // eslint-disable-next-line no-console
           console.error("S3 PUT error", putRes.status, details);
           throw new Error(msg);
@@ -46,7 +45,7 @@ export default function ImageUploader({
         onUploaded({ key: p.key, url: p.publicUrl });
       }
     } catch (e) {
-      alert((e as any)?.message || "Upload error");
+      alert((e as any)?.message || "Грешка при качването.");
     } finally {
       setBusy(false);
       // Allow selecting the same file again by clearing the input value
@@ -71,7 +70,7 @@ export default function ImageUploader({
         disabled={busy}
         onClick={() => fileRef.current?.click()}
       >
-        {busy ? "Качване…" : "Качи снимки"}
+        {busy ? "Качване…" : multiple ? "Качи изображения" : "Качи изображение"}
       </Button>
     </div>
   );
