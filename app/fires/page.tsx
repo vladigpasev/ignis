@@ -1,5 +1,8 @@
 import HomeClient from "@/app/home-client";
 import { listFires, createFire } from "@/app/actions/fires";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { History } from "lucide-react";
 
 export const runtime = "nodejs";
 export const revalidate = 0;
@@ -21,7 +24,12 @@ export default async function FiresPage() {
   return (
     <>
       <div className="max-w-6xl mx-auto w-full px-4 pt-4">
-        <a href="/fires/past" className="text-sm underline text-muted-foreground">Виж минали (неактивни) пожари</a>
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+          <Link href="/fires/past">
+            <History className="size-4" />
+            Виж минали (неактивни) пожари
+          </Link>
+        </Button>
       </div>
       <HomeClient initialFires={initialFires as any} createAction={createFire} />
     </>

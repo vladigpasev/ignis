@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 function env(name: string, fallback?: string) {
   const v = process.env[name];
   return v && v.length ? v : fallback;
@@ -11,8 +9,8 @@ const RESEND_FROM = env('NOTIFY_EMAIL_FROM', 'alerts@firelinks.org');
 
 // SMS via QuadraMM
 const QUADRA_BASE = env('QUADRA_SMS_GATEWAY_URL', 'http://gate.quadra-mm.com/feed/http.asp');
-const QUADRA_USER = env('QUADRA_SMS_USER', 'archtag');
-const QUADRA_PASS = env('QUADRA_SMS_PASS', 'Archtag@2024');
+const QUADRA_USER = env('QUADRA_SMS_USER', '');
+const QUADRA_PASS = env('QUADRA_SMS_PASS', '');
 const QUADRA_ROUTE = env('QUADRA_SMS_ROUTE', 'eu');
 
 export type DeliveryResult = { ok: boolean; id?: string; error?: string };
@@ -64,6 +62,7 @@ export async function sendSms(phone: string, message: string): Promise<DeliveryR
   try {
     const normalized = normalizeBgPhone(phone);
     if (!normalized) return { ok: false, error: 'Invalid phone format' };
+    if (!QUADRA_USER || !QUADRA_PASS) return { ok: false, error: 'Missing SMS credentials' };
     const params = new URLSearchParams({
       user: QUADRA_USER || '',
       pass: QUADRA_PASS || '',
@@ -86,30 +85,31 @@ export async function sendSms(phone: string, message: string): Promise<DeliveryR
 }
 
 export function buildReportEmail({
-  lat, lng, radiusM, fireId, baseUrl,
-}: { lat: number; lng: number; radiusM?: number; fireId?: number; baseUrl: string }) {
-  const link = fireId ? `${baseUrl}/fires/${fireId}` : `https://www.google.com/maps?q=${lat},${lng}`;
-  const source = fireId ? 'Докладван пожар (потвърден източник)' : 'FIRMS (непотвърден източник)';
-  const subject = fireId ? 'Докладван пожар близо до вас' : 'Потенциален пожар (FIRMS) близо до вас';
+  lat, lng, radiusM, fireId, baseUrl, unsubscribeUrl,
+}: { lat: number; lng: number; radiusM?: number; fireId: number; baseUrl: string; unsubscribeUrl?: string }) {
+  const link = `${baseUrl}/fires/${fireId}`;
+  const source = 'Докладван пожар (потвърден източник)';
+  const subject = 'Докладван пожар близо до вас';
   const html = `
     <div style="font-family: Arial, sans-serif; line-height:1.5;">
       <p>Източник: <strong>${source}</strong></p>
       <p>Локация: <a href="${link}">${lat.toFixed(4)}, ${lng.toFixed(4)}</a></p>
       ${radiusM ? `<p>Приблизителен радиус: ${Math.round(radiusM)} м</p>` : ''}
-      ${fireId ? `<p>Виж детайли: <a href="${link}">${link}</a></p>` : `<p>Карта: <a href="${link}">${link}</a></p>`}
+      <p>Виж детайли: <a href="${link}">${link}</a></p>
       <hr />
       <p>firelinks.org — обществен мониторинг на пожари</p>
+      ${unsubscribeUrl ? `<p style="font-size:12px;color:#6b7280;">Ако не желаете повече известия, можете да се отпишете: <a href="${unsubscribeUrl}">${unsubscribeUrl}</a></p>` : ''}
     </div>
   `;
-  const text = `Източник: ${source}\nЛокация: ${lat.toFixed(4)}, ${lng.toFixed(4)}\nЛинк: ${link}`;
+  const text = `Източник: ${source}\nЛокация: ${lat.toFixed(4)}, ${lng.toFixed(4)}\nЛинк: ${link}${unsubscribeUrl ? `\nОтписване: ${unsubscribeUrl}` : ''}`;
   return { subject, html, text };
 }
 
 export function buildReportSms({
-  lat, lng, fireId, baseUrl,
-}: { lat: number; lng: number; fireId?: number; baseUrl: string }) {
-  const link = fireId ? `${baseUrl}/fires/${fireId}` : `https://www.google.com/maps?q=${lat},${lng}`;
-  const prefix = fireId ? 'Докладван пожар:' : 'FIRMS (непотвърдено):';
-  const msg = `${prefix} ${lat.toFixed(4)},${lng.toFixed(4)} ${link}`;
+  lat, lng, fireId, baseUrl, unsubscribeUrl,
+}: { lat: number; lng: number; fireId: number; baseUrl: string; unsubscribeUrl?: string }) {
+  const link = `${baseUrl}/fires/${fireId}`;
+  const prefix = 'Докладван пожар:';
+  const msg = `${prefix} ${lat.toFixed(4)},${lng.toFixed(4)} ${link}${unsubscribeUrl ? ` Отписване: ${unsubscribeUrl}` : ''}`;
   return msg;
 }

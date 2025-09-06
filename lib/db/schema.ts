@@ -17,17 +17,23 @@ export const notificationSubscriptions = pgTable(
   'notification_subscriptions',
   {
     id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
     email: varchar('email', { length: 255 }),
     phone: varchar('phone', { length: 32 }),
     lat: doublePrecision('lat').notNull(),
     lng: doublePrecision('lng').notNull(),
     radiusKm: integer('radius_km').notNull().default(15),
-    sourceFirms: integer('source_firms').notNull().default(1), // 1=true, 0=false (bool-like)
+    // Deprecated: FIRMS source is no longer used for notifications.
+    sourceFirms: integer('source_firms').notNull().default(0), // keep column for backward compat but default to 0
     sourceReports: integer('source_reports').notNull().default(1),
+    // Subscription state and unsubscribe token
+    active: integer('active').notNull().default(1), // 1=true, 0=false
+    unsubscribeToken: varchar('unsubscribe_token', { length: 128 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
+    userIdx: index('notif_sub_user_idx').on(t.userId),
     emailIdx: index('notif_sub_email_idx').on(t.email),
     phoneIdx: index('notif_sub_phone_idx').on(t.phone),
     coordIdx: index('notif_sub_coord_idx').on(t.lat, t.lng),

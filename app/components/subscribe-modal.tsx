@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import MapProvider from "@/lib/mapbox/provider";
 import { useMap } from "@/context/map-context";
 import type mapboxgl from "mapbox-gl";
+import { useUser } from "@auth0/nextjs-auth0";
 
-function isValidEmail(v: string) { return /.+@.+\..+/.test(v); }
 const ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
 function MapInner({ center, onCenterChange, radiusKm }: { center: [number, number]; onCenterChange: (lng: number, lat: number) => void; radiusKm: number; }) {
@@ -91,16 +91,14 @@ function MapInner({ center, onCenterChange, radiusKm }: { center: [number, numbe
 
 export default function SubscribeModal() {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [radiusKm, setRadiusKm] = useState<number>(15);
-  const [sourceReports, setSourceReports] = useState(true);
-  const [sourceFirms, setSourceFirms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string>("");
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const { user, isLoading } = useUser();
 
   // default center: Sofia
   const [center, setCenter] = useState<[number, number]>([23.3219, 42.6977]);
@@ -142,18 +140,17 @@ export default function SubscribeModal() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg("");
-    if (!email && !phone) { setMsg("Въведете имейл или телефон."); return; }
-    if (email && !isValidEmail(email)) { setMsg("Невалиден имейл адрес."); return; }
+    if (!user) { setMsg("Трябва да сте логнати."); return; }
     try {
       setLoading(true);
       const res = await fetch('/api/subscriptions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, phone, lat: center[1], lng: center[0], radiusKm, sourceFirms, sourceReports }),
+        body: JSON.stringify({ phone, lat: center[1], lng: center[0], radiusKm }),
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || res.statusText);
       setMsg("Успешно записване! Ще получавате известия за района.");
-      setEmail(""); setPhone("");
+      setPhone("");
     } catch (e: any) {
       setMsg(e?.message || 'Грешка при записване.');
     } finally {
@@ -215,16 +212,23 @@ export default function SubscribeModal() {
             </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="grid grid-cols-1 gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="email">Имейл</Label>
-                    <Input id="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                {!isLoading && !user && (
+                  <div className="p-3 rounded-md bg-amber-50 text-amber-700 text-sm">
+                    За да създадете абонамент за известия, моля <a className="underline" href="/auth/login">влезте в профила си</a>.
                   </div>
-                  <div>
-                    <Label htmlFor="phone">Телефон</Label>
-                    <Input id="phone" placeholder="3598XXXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                )}
+                {!!user && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Имейл</Label>
+                      <Input value={user.email || ''} readOnly />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Телефон (по избор)</Label>
+                      <Input id="phone" placeholder="3598XXXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <Label>Радиус: {radiusKm} км</Label>
@@ -232,21 +236,14 @@ export default function SubscribeModal() {
                   <p className="text-xs text-gray-500 mt-1">Препоръка: 10–25 км</p>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={sourceReports} onChange={(e) => setSourceReports(e.target.checked)} /> Доклади
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={sourceFirms} onChange={(e) => setSourceFirms(e.target.checked)} /> FIRMS
-                  </label>
-                </div>
+                {/* Only reported fires are used for notifications */}
 
                 <div className="text-xs text-gray-500">Избрано: {center[1].toFixed(5)}, {center[0].toFixed(5)}</div>
                 {msg && <div className="text-sm text-gray-700">{msg}</div>}
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Затвори</Button>
-                <Button type="submit" disabled={loading}>{loading ? 'Записване…' : 'Запиши'}</Button>
+                <Button type="submit" disabled={loading || !user}>{loading ? 'Записване…' : 'Запиши'}</Button>
               </div>
             </form>
           </div>
