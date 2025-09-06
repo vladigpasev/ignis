@@ -353,3 +353,38 @@ export const fireDeactivationVotes = pgTable(
     userIdx: index('fire_deactivation_votes_user_idx').on(t.userId),
   })
 );
+
+// ---------- AI: Assistant + Vector Store mapping per fire ----------
+export const fireAiResources = pgTable(
+  'fire_ai_resources',
+  {
+    id: serial('id').primaryKey(),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    assistantId: varchar('assistant_id', { length: 128 }).notNull(),
+    vectorStoreId: varchar('vector_store_id', { length: 128 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    fireUnique: uniqueIndex('fire_ai_resources_fire_unique').on(t.fireId),
+    assistantIdx: index('fire_ai_resources_assistant_idx').on(t.assistantId),
+    vectorIdx: index('fire_ai_resources_vector_idx').on(t.vectorStoreId),
+  })
+);
+
+export const fireAiThreads = pgTable(
+  'fire_ai_threads',
+  {
+    id: serial('id').primaryKey(),
+    fireId: integer('fire_id').notNull().references(() => fires.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    threadId: varchar('thread_id', { length: 128 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    fireUserUnique: uniqueIndex('fire_ai_threads_fire_user_unique').on(t.fireId, t.userId),
+    fireIdx: index('fire_ai_threads_fire_idx').on(t.fireId),
+    userIdx: index('fire_ai_threads_user_idx').on(t.userId),
+  })
+);

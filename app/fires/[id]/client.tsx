@@ -9,13 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { metersToReadable, circlePolygon } from "@/lib/geo";
-import { Navigation, QrCode, Check, User2, Users, MessageCircle, Plus, X } from "lucide-react";
+import { Navigation, QrCode, Check, User2, Users, MessageCircle, Plus, X, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import * as QRCode from "qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ZoneDraw from "@/components/zones/zone-draw";
 import ZoneList from "@/components/zones/zone-list";
 import ZoneShapes from "@/components/zones/zone-shapes";
 import SendbirdChat from "@/components/chat/sendbird-chat";
+import FireAssistant from "@/components/assistant/fire-assistant";
 import { useSendbirdUnreadMany } from "@/hooks/useSendbirdUnreadMany";
 import type mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
@@ -121,7 +123,7 @@ export default function FireDetailsClient({
 
   // chat
   const [chatOpen, setChatOpen] = useState(false);
-  const [activeChat, setActiveChat] = useState<"fire" | "zone">("fire");
+  const [activeChat, setActiveChat] = useState<"fire" | "zone" | "ai">("fire");
   // local ref to map instance captured on load
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -353,12 +355,19 @@ export default function FireDetailsClient({
           <Badge variant="secondary" className="shadow-lg">Пожар #{fire.id}</Badge>
         </div>
 
-        {canEditZones && !showZoneCreator && (
-          <div className="absolute top-4 left-4 z-10">
-            <Button size="sm" className="rounded-full shadow-md" onClick={() => setShowZoneCreator(true)} title="Създай зона">
-              <Plus className="h-4 w-4 mr-1" />
-              Създай зона
+        {!showZoneCreator && (
+          <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+            <Button asChild size="sm" variant="secondary" className="rounded-full shadow-md" title="Назад към пожарите">
+              <Link href="/fires">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Назад
+              </Link>
             </Button>
+            {canEditZones && (
+              <Button size="sm" className="rounded-full shadow-md" onClick={() => setShowZoneCreator(true)} title="Създай зона">
+                <Plus className="h-4 w-4 mr-1" />
+                Създай зона
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -525,28 +534,80 @@ export default function FireDetailsClient({
         </div>
       </div>
 
-      {/* Floating Chat Panel (fixed, doesn't move the button) */}
+      {/* Floating Chat Panel: mobile full-screen overlay */}
       {chatOpen && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-30 w-[min(420px,calc(100vw-1rem))] max-h-[70vh] bg-background/95 backdrop-blur border rounded-xl shadow-xl p-3">
-          <div className="flex items-center justify-between mb-2 gap-2">
-            <div className="inline-flex p-0.5 bg-muted rounded-full">
-              <Button size="sm" variant={activeChat === "fire" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("fire")}>
-                Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
-              </Button>
-              <Button size="sm" variant={activeChat === "zone" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("zone")} disabled={!zoneConnect}>
-                Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
+        <>
+          {/* Mobile: full-screen, safe-area aware */}
+          <div className="sm:hidden fixed inset-0 z-50 h-[100dvh] bg-background">
+            <div className="flex h-full min-h-0 flex-col pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+              <div className="sticky top-0 z-10 border-b bg-background px-3 py-2 pt-[calc(env(safe-area-inset-top))] flex items-center justify-between gap-2">
+                <div className="inline-flex p-0.5 bg-muted rounded-full">
+                  <Button size="sm" variant={activeChat === "fire" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("fire")}>
+                    Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
+                  </Button>
+                  <Button size="sm" variant={activeChat === "zone" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("zone")} disabled={!zoneConnect}>
+                    Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
+                  </Button>
+                  <Button size="sm" variant={activeChat === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("ai")}>
+                    AI бот
+                  </Button>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-hidden px-3 pt-2">
+                {activeChat === "fire" && (
+                  <div className="h-full">
+                    <SendbirdChat connectUrl={fireConnect} className="h-full" />
+                  </div>
+                )}
+                {activeChat === "zone" && zoneConnect && (
+                  <div className="h-full">
+                    <SendbirdChat connectUrl={zoneConnect} className="h-full" />
+                  </div>
+                )}
+                {activeChat === "ai" && (
+                  <div className="h-full">
+                    <FireAssistant fireId={fire.id} fullHeight />
+                  </div>
+                )}
+                {activeChat === "zone" && !zoneConnect && (
+                  <div className="text-sm text-muted-foreground py-10 text-center">Не сте член на зона. Влезте в зона, за да видите чат.</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop: floating panel */}
+          <div className="hidden sm:block fixed bottom-24 right-4 z-30 w-[min(420px,calc(100vw-1rem))] bg-background/95 backdrop-blur border rounded-xl shadow-xl p-3">
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <div className="inline-flex p-0.5 bg-muted rounded-full">
+                <Button size="sm" variant={activeChat === "fire" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("fire")}>
+                  Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
+                </Button>
+                <Button size="sm" variant={activeChat === "zone" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("zone")} disabled={!zoneConnect}>
+                  Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
+                </Button>
+                <Button size="sm" variant={activeChat === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("ai")}>
+                  AI бот
+                </Button>
+              </div>
+              <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
+                <X className="h-4 w-4" />
               </Button>
             </div>
-            <Button size="icon" variant="ghost" onClick={() => setChatOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="h-[60vh]">
+              {activeChat === "fire" && <SendbirdChat connectUrl={fireConnect} className="h-full" />}
+              {activeChat === "zone" && zoneConnect && <SendbirdChat connectUrl={zoneConnect} className="h-full" />}
+              {activeChat === "ai" && <FireAssistant fireId={fire.id} />}
+              {activeChat === "zone" && !zoneConnect && (
+                <div className="text-sm text-muted-foreground py-10 text-center">Не сте член на зона. Влезте в зона, за да видите чат.</div>
+              )}
+            </div>
           </div>
-          {activeChat === "fire" && <SendbirdChat connectUrl={fireConnect} />}
-          {activeChat === "zone" && zoneConnect && <SendbirdChat connectUrl={zoneConnect} />}
-          {activeChat === "zone" && !zoneConnect && (
-            <div className="text-sm text-muted-foreground py-10 text-center">Не сте член на зона. Влезте в зона, за да видите чат.</div>
-          )}
-        </div>
+        </>
       )}
 
       {/* Unread pill (fixed near the button, no layout shift) */}

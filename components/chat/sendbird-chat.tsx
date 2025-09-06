@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
 
 // Lazy-load UI kit on client only to avoid SSR issues
 const SendBirdProvider = dynamic(() => import("@sendbird/uikit-react").then(m => m.SendBirdProvider), { ssr: false }) as any;
@@ -18,7 +19,17 @@ type ConnectInfo = {
   error?: string;
 };
 
-export default function SendbirdChat({ fireId, connectUrl }: { fireId?: number; connectUrl?: string }) {
+export default function SendbirdChat({
+  fireId,
+  connectUrl,
+  className,
+  style,
+}: {
+  fireId?: number;
+  connectUrl?: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
   const [info, setInfo] = useState<ConnectInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -50,31 +61,31 @@ export default function SendbirdChat({ fireId, connectUrl }: { fireId?: number; 
       return <div className="text-sm text-red-500">Липсват данни за свързване към Sendbird.</div>;
 
     return (
-      <div style={{ height: '60vh', overflow: 'visible' }}>
-        <SendBirdProvider
-          appId={info.appId}
-          userId={info.userId}
-          accessToken={info.accessToken || undefined}
-          nickname={info.nickname || undefined}
-        >
+      <SendBirdProvider
+        appId={info.appId}
+        userId={info.userId}
+        accessToken={info.accessToken || undefined}
+        nickname={info.nickname || undefined}
+      >
+        <div className="h-full min-h-0">
           <Channel
             channelUrl={info.channelUrl}
             startingPoint={0}
             queries={{ messageListParams: { prevResultSize: 50, nextResultSize: 0, isInclusive: true, includeReactions: true, includeMetaArray: true, includeParentMessageInfo: true, includeThreadInfo: true } }}
             onChatHeaderActionClick={() => setSettingsOpen(true)}
           />
-          {settingsOpen && (
-            <ChannelSettings
-              channelUrl={info.channelUrl}
-              onClose={() => setSettingsOpen(false)}
-            />
-          )}
-        </SendBirdProvider>
-      </div>
+        </div>
+        {settingsOpen && (
+          <ChannelSettings
+            channelUrl={info.channelUrl}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
+      </SendBirdProvider>
     );
   }, [info, error, settingsOpen]);
 
   return (
-    <div className="sb-wrapper">{content}</div>
+    <div className={cn("sb-wrapper h-full min-h-0", className)} style={style}>{content}</div>
   );
 }

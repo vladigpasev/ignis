@@ -156,3 +156,49 @@ export async function joinUserToChannel(channelUrl: string, userId: string) {
     // ignore
   }
 }
+
+export function canUseSendbird() {
+  return Boolean(BASE && TOKEN);
+}
+
+type SBMessage = {
+  message_id: number;
+  type: string; // 'MESG' | 'FILE' | 'ADMM' etc.
+  message?: string;
+  data?: string;
+  created_at: number; // ms
+  user?: { user_id: string; nickname?: string };
+};
+
+export async function listChannelMessages(channelUrl: string, take = 200, { includeSystem = false }: { includeSystem?: boolean } = {}) {
+  // Fetch recent messages by paging backward using message_ts
+  const results: SBMessage[] = [];
+  let ts = Date.now();
+  const maxPage = Math.max(1, Math.ceil(Math.min(take, 1000) / 100));
+  for (let i = 0; i < maxPage && results.length < take; i++) {
+    const prevLimit = Math.min(100, take - results.length);
+    const params = new URLSearchParams({
+      message_ts: String(ts),
+      prev_limit: String(prevLimit),
+      next_limit: '0',
+      include: 'true',
+      reverse: 'true',
+      include_parent_message_info: 'true',
+      include_thread_info: 'true',
+      with_sorted_meta_array: 'false',
+      // Filter to user messages unless includeSystem
+      ...(includeSystem ? {} : { message_type: 'MESG' }),
+    });
+    try {
+      const page = await sbFetch<SBMessage[]>(`/v3/group_channels/${encodeURIComponent(channelUrl)}/messages?${params.toString()}`);
+      if (!Array.isArray(page) || page.length === 0) break;
+      results.push(...page);
+      ts = Math.min(...page.map((m) => m.created_at)) - 1;
+    } catch (e) {
+      break;
+    }
+  }
+  // Normalize newest last
+  results.sort((a, b) => a.created_at - b.created_at);
+  return results.slice(-take);
+}

@@ -22,6 +22,7 @@ import { circlePolygon } from "@/lib/geo";
 import ImageUploader from "@/components/uploads/image-uploader";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import Markdown from "@/components/ui/markdown";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const STYLE = "satellite-streets-v12";
@@ -570,9 +571,7 @@ export default function ZoneDetailsClient({
                           ) : (
                             <div className="mt-2">
                               {u.text && (
-                                <div className="text-muted-foreground whitespace-pre-wrap break-words">
-                                  {u.text}
-                                </div>
+                                <Markdown content={u.text} className="text-muted-foreground text-sm break-words" />
                               )}
                               {u.images?.length > 0 && (
                                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -826,61 +825,123 @@ export default function ZoneDetailsClient({
         </div>
       </div>
 
-      {/* Floating Chat Panel */}
+      {/* Floating Chat Panel: responsive */}
       <div>
         {chatOpen && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-30 w-[min(420px,calc(100vw-1rem))] max-h-[70vh] bg-background/95 backdrop-blur border rounded-xl shadow-xl p-3">
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <div className="inline-flex p-0.5 bg-muted rounded-full">
-                <button
-                  className={`px-3 py-1.5 rounded-full text-sm ${
-                    activeChat === "zone"
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted-foreground/10"
-                  }`}
-                  onClick={() => setActiveChat("zone")}
-                  disabled={!zoneConnect}
-                >
-                  Зона {z.title ? `(${z.title})` : ""}{" "}
-                  {zoneConnect && counts?.[zoneConnect] ? (
-                    <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
-                      {counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}
-                    </span>
-                  ) : null}
-                </button>
-                <button
-                  className={`px-3 py-1.5 rounded-full text-sm ${
-                    activeChat === "fire"
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted-foreground/10"
-                  }`}
-                  onClick={() => setActiveChat("fire")}
-                >
-                  Чат за пожара{" "}
-                  {counts?.[fireConnect] ? (
-                    <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
-                      {counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}
-                    </span>
-                  ) : null}
-                </button>
+          <>
+            {/* Mobile full-screen overlay */}
+            <div className="sm:hidden fixed inset-0 z-50 h-[100dvh] bg-background">
+              <div className="flex h-full min-h-0 flex-col pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+                <div className="sticky top-0 z-10 border-b bg-background px-3 py-2 pt-[calc(env(safe-area-inset-top))] flex items-center justify-between gap-2">
+                  <div className="inline-flex p-0.5 bg-muted rounded-full">
+                    <button
+                      className={`px-3 py-1.5 rounded-full text-sm ${
+                        activeChat === "zone" ? "bg-primary text-primary-foreground" : "hover:bg-muted-foreground/10"
+                      }`}
+                      onClick={() => setActiveChat("zone")}
+                      disabled={!zoneConnect}
+                    >
+                      Зона {z.title ? `(${z.title})` : ""}{" "}
+                      {zoneConnect && counts?.[zoneConnect] ? (
+                        <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                          {counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}
+                        </span>
+                      ) : null}
+                    </button>
+                    <button
+                      className={`px-3 py-1.5 rounded-full text-sm ${
+                        activeChat === "fire" ? "bg-primary text-primary-foreground" : "hover:bg-muted-foreground/10"
+                      }`}
+                      onClick={() => setActiveChat("fire")}
+                    >
+                      Чат за пожара{" "}
+                      {counts?.[fireConnect] ? (
+                        <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                          {counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}
+                        </span>
+                      ) : null}
+                    </button>
+                  </div>
+                  <button
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-muted"
+                    onClick={() => setChatOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-hidden px-3 pt-2">
+                  {activeChat === "zone" && zoneConnect && (
+                    <div className="h-full">
+                      <SendbirdChat connectUrl={zoneConnect} className="h-full" />
+                    </div>
+                  )}
+                  {activeChat === "zone" && !zoneConnect && (
+                    <div className="text-sm text-muted-foreground py-10 text-center">
+                      Нямате достъп до чата на зоната. Присъединете се първо.
+                    </div>
+                  )}
+                  {activeChat === "fire" && (
+                    <div className="h-full">
+                      <SendbirdChat connectUrl={fireConnect} className="h-full" />
+                    </div>
+                  )}
+                </div>
               </div>
-              <button
-                className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-muted"
-                onClick={() => setChatOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
-            {activeChat === "zone" && zoneConnect && (
-              <SendbirdChat connectUrl={zoneConnect} />
-            )}
-            {activeChat === "zone" && !zoneConnect && (
-              <div className="text-sm text-muted-foreground py-10 text-center">
-                Нямате достъп до чата на зоната. Присъединете се първо.
+
+            {/* Desktop floating panel */}
+            <div className="hidden sm:block fixed bottom-24 right-4 z-30 w-[min(420px,calc(100vw-1rem))] bg-background/95 backdrop-blur border rounded-xl shadow-xl p-3">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <div className="inline-flex p-0.5 bg-muted rounded-full">
+                  <button
+                    className={`px-3 py-1.5 rounded-full text-sm ${
+                      activeChat === "zone" ? "bg-primary text-primary-foreground" : "hover:bg-muted-foreground/10"
+                    }`}
+                    onClick={() => setActiveChat("zone")}
+                    disabled={!zoneConnect}
+                  >
+                    Зона {z.title ? `(${z.title})` : ""}{" "}
+                    {zoneConnect && counts?.[zoneConnect] ? (
+                      <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                        {counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    className={`px-3 py-1.5 rounded-full text-sm ${
+                      activeChat === "fire" ? "bg-primary text-primary-foreground" : "hover:bg-muted-foreground/10"
+                    }`}
+                    onClick={() => setActiveChat("fire")}
+                  >
+                    Чат за пожара{" "}
+                    {counts?.[fireConnect] ? (
+                      <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                        {counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+                <button
+                  className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-muted"
+                  onClick={() => setChatOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-            )}
-            {activeChat === "fire" && <SendbirdChat connectUrl={fireConnect} />}
-          </div>
+              <div className="h-[60vh]">
+                {activeChat === "zone" && zoneConnect && (
+                  <SendbirdChat connectUrl={zoneConnect} className="h-full" />
+                )}
+                {activeChat === "zone" && !zoneConnect && (
+                  <div className="text-sm text-muted-foreground py-10 text-center">
+                    Нямате достъп до чата на зоната. Присъединете се първо.
+                  </div>
+                )}
+                {activeChat === "fire" && <SendbirdChat connectUrl={fireConnect} className="h-full" />}
+              </div>
+            </div>
+          </>
         )}
         {!chatOpen && unreadCount > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-24 z-30 max-w-[calc(100vw-1rem)]">
@@ -916,4 +977,3 @@ export default function ZoneDetailsClient({
     </div>
   );
 }
-
