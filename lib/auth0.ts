@@ -11,7 +11,7 @@ import { getAppBaseUrl } from "./env";
 // Provide API-specific parameters explicitly.
 export const auth0 = new Auth0Client({
   // Ensure Auth0 uses the correct base URL in all environments
-  baseURL: getAppBaseUrl(),
+  appBaseUrl: getAppBaseUrl(),
   authorizationParameters: {
     ...(process.env.AUTH0_SCOPE ? { scope: process.env.AUTH0_SCOPE } : {}),
     ...(process.env.AUTH0_AUDIENCE &&
