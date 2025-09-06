@@ -16,12 +16,12 @@ export default function Hero() {
       />
 
       {/* Overlay */}
-      <div className="absolute inset-0 bg-white/15" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/20 to-transparent" />
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 w-full">
         <div className="max-w-2xl p-8 rounded-[12px]">
-          <p className="caption text-accent mb-2">
+          <p className="caption text-primary mb-2">
             ОБЕДИНЕНИ СРЕЩУ ПОЖАРИТЕ
           </p>
           <h1 className="heading-one mb-6">

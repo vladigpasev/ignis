@@ -34,7 +34,7 @@ export default function Features() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 text-center">
         {/* Section Title */}
         <p className="caption">
@@ -54,17 +54,17 @@ export default function Features() {
                   alt={feature.title}
                   width={300}
                   height={200}
-                  className="w-full h-40 object-cover bg-gray-200 rounded-t-[12px]"
+                  className="w-full h-40 object-cover bg-muted rounded-t-[12px]"
                 />
               </CardHeader>
               <CardContent className="p-4 flex-1 text-left">
                 <h3 className="font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-600">{feature.description}</p>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
               </CardContent>
               <CardFooter className="p-4">
                 <Button
                   variant="link"
-                  className="text-[#DD6630] font-medium"
+                  className="text-primary font-medium"
                 >
                   Още информация <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>

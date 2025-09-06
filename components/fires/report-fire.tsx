@@ -55,13 +55,13 @@ export default function ReportFire({ action }: Props) {
             id: PREVIEW_FILL,
             type: "fill",
             source: PREVIEW_SRC,
-            paint: { "fill-color": "#ef4444", "fill-opacity": 0.12 },
+            paint: { "fill-color": "#DC2626", "fill-opacity": 0.12 },
           });
           map.addLayer({
             id: PREVIEW_LINE,
             type: "line",
             source: PREVIEW_SRC,
-            paint: { "line-color": "#ef4444", "line-width": 2, "line-opacity": 0.7 },
+            paint: { "line-color": "#DC2626", "line-width": 2, "line-opacity": 0.7 },
           });
         } else {
           const src = map.getSource(PREVIEW_SRC) as any;

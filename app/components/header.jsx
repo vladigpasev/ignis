@@ -20,7 +20,7 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="w-full border-b border-gray-200 bg-white pt-2 pb-2">
+    <header className="w-full border-b border-border bg-background pt-2 pb-2">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
@@ -30,7 +30,7 @@ export default function Header() {
             width={32}
             height={32}
           />
-          <span className="text-[24px] font-bold text-[#21272A]">FireLinks</span>
+          <span className="text-[24px] font-bold text-foreground">FireLinks</span>
         </Link>
 
         {/* Desktop Navigation + Phone + Actions */}
@@ -38,27 +38,27 @@ export default function Header() {
           <nav className="flex items-center gap-8">
             <Link
               href="#"
-              className="text-[18px] text-[#21272A] hover:text-[#DD6630]"
+              className="text-[18px] text-foreground hover:text-primary"
             >
               За нас
             </Link>
             <Link
               href="#"
-              className="text-[18px] text-[#21272A] hover:text-[#DD6630]"
+              className="text-[18px] text-foreground hover:text-primary"
             >
               HeatMap
             </Link>
             <Link
               href="#"
-              className="text-[18px] text-[#21272A] hover:text-[#DD6630]"
+              className="text-[18px] text-foreground hover:text-primary"
             >
               Подкрепи
             </Link>
           </nav>
 
           <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-[#21272A]" />
-            <span className="text-[18px] font-bold text-[#e65300]">
+            <Phone className="w-5 h-5 text-foreground" />
+            <span className="text-[18px] font-bold text-primary">
               0700 00 000
             </span>
           </div>
@@ -69,7 +69,7 @@ export default function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   asChild
-                  className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}
+                  className={cn("px-4 py-2 text-foreground/80 hover:text-foreground transition-colors")}
                 >
                   <Link href="#">Eleven</Link>
                 </NavigationMenuLink>
@@ -77,7 +77,7 @@ export default function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   asChild
-                  className={cn("px-4 py-2 text-gray-700 hover:text-black transition-colors")}
+                  className={cn("px-4 py-2 text-foreground/80 hover:text-foreground transition-colors")}
                 >
                   <Link href="#">Twelve</Link>
                 </NavigationMenuLink>
@@ -101,7 +101,7 @@ export default function Header() {
         <div className="md:hidden flex items-center gap-3">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-[#21272A] focus:outline-none"
+            className="text-foreground focus:outline-none"
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -110,28 +110,28 @@ export default function Header() {
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200 px-4 py-4 flex flex-col gap-4">
+        <div className="md:hidden bg-background border-t border-border px-4 py-4 flex flex-col gap-4">
           <Link
             href="#"
-            className="text-[18px] text-[#21272A] hover:text-[#DD6630]"
+            className="text-[18px] text-foreground hover:text-primary"
           >
             За нас
           </Link>
           <Link
             href="#"
-            className="text-[18px] text-[#21272A] hover:text-[#DD6630]"
+            className="text-[18px] text-foreground hover:text-primary"
           >
             HeatMap
           </Link>
           <Link
             href="#"
-            className="text-[18px] text-[#21272A] hover:text-[#DD6630]"
+            className="text-[18px] text-foreground hover:text-primary"
           >
             Подкрепи
           </Link>
           <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-[#21272A]" />
-            <span className="text-[18px] font-bold text-[#e65300]">
+            <Phone className="w-5 h-5 text-foreground" />
+            <span className="text-[18px] font-bold text-primary">
               0700 00 000
             </span>
           </div>

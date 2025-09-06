@@ -167,7 +167,7 @@ export default function SubscribeModal() {
         <div className="grid md:grid-cols-[2fr_1fr] gap-0 md:h-[80vh] md:max-h-[860px]">
           <div className="relative">
             <div className="absolute z-10 w-full p-4">
-              <div className="bg-white/90 backdrop-blur-sm rounded-md shadow flex items-center gap-2 p-2">
+              <div className="bg-background/90 backdrop-blur-sm rounded-md shadow flex items-center gap-2 p-2">
                 <Input
                   placeholder="Търси адрес или място…"
                   value={query}
@@ -177,15 +177,15 @@ export default function SubscribeModal() {
                 <Button type="button" variant="outline" onClick={useMyLocation}>Моята локация</Button>
               </div>
               {suggestOpen && suggestions.length > 0 && (
-                <div className="mt-2 bg-white/95 backdrop-blur rounded-md shadow max-h-60 overflow-auto">
+                <div className="mt-2 bg-background/95 backdrop-blur rounded-md shadow max-h-60 overflow-auto">
                   {suggestions.map((f: any) => (
                     <button
                       key={f.id}
                       onClick={() => { setCenter([f.center[0], f.center[1]]); setSuggestOpen(false); setQuery(f.place_name || ''); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                      className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
                     >
                       {f.text || f.place_name}
-                      <div className="text-[11px] text-gray-500">{f.place_name}</div>
+                      <div className="text-[11px] text-muted-foreground">{f.place_name}</div>
                     </button>
                   ))}
                 </div>
@@ -206,14 +206,14 @@ export default function SubscribeModal() {
             </MapProvider>
           </div>
 
-          <div className="flex flex-col border-l bg-white p-5 gap-4">
+          <div className="flex flex-col border-l bg-background p-5 gap-4">
             <DialogHeader>
               <DialogTitle>Настройка на известия</DialogTitle>
             </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="grid grid-cols-1 gap-3">
                 {!isLoading && !user && (
-                  <div className="p-3 rounded-md bg-amber-50 text-amber-700 text-sm">
+                  <div className="p-3 rounded-md bg-accent text-foreground text-sm">
                     За да създадете абонамент за известия, моля <a className="underline" href="/auth/login">влезте в профила си</a>.
                   </div>
                 )}
@@ -233,13 +233,13 @@ export default function SubscribeModal() {
                 <div>
                   <Label>Радиус: {radiusKm} км</Label>
                   <input type="range" min={1} max={200} value={radiusKm} onChange={(e) => setRadiusKm(Number(e.target.value))} className="w-full" />
-                  <p className="text-xs text-gray-500 mt-1">Препоръка: 10–25 км</p>
+                  <p className="text-xs text-muted-foreground mt-1">Препоръка: 10–25 км</p>
                 </div>
 
                 {/* Only reported fires are used for notifications */}
 
-                <div className="text-xs text-gray-500">Избрано: {center[1].toFixed(5)}, {center[0].toFixed(5)}</div>
-                {msg && <div className="text-sm text-gray-700">{msg}</div>}
+                <div className="text-xs text-muted-foreground">Избрано: {center[1].toFixed(5)}, {center[0].toFixed(5)}</div>
+                {msg && <div className="text-sm text-foreground">{msg}</div>}
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Затвори</Button>

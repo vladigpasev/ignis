@@ -54,7 +54,7 @@ export default function FireCircles({ fires }: { fires: FireItem[] }) {
             type: "fill",
             source: SRC_ID,
             paint: {
-              "fill-color": "#ef4444",
+              "fill-color": "#DC2626",
               "fill-opacity": 0.15,
             },
           });
@@ -65,7 +65,7 @@ export default function FireCircles({ fires }: { fires: FireItem[] }) {
             type: "line",
             source: SRC_ID,
             paint: {
-              "line-color": "#ef4444",
+              "line-color": "#DC2626",
               "line-width": 2,
               "line-opacity": 0.6,
             },

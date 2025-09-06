@@ -11,6 +11,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,71 +54,87 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Brand-aligned light theme */
+  --background: #ffffff;
+  --foreground: #21272A; /* charcoal text */
+  --card: #ffffff;
+  --card-foreground: #21272A;
+  --popover: #ffffff;
+  --popover-foreground: #21272A;
+  --primary: #DD6630; /* brand orange */
+  --primary-foreground: #ffffff;
+  --secondary: #F5F7FA; /* subtle neutral */
+  --secondary-foreground: #21272A;
+  --muted: #F2F4F7;
+  --muted-foreground: #667085;
+  --accent: #FFF2EC; /* light brand tint for hovers/selections */
+  --accent-foreground: #7A2E00;
+  --destructive: #DC2626;
+  --success: #16A34A;
+  --success-foreground: #ffffff;
+  --warning: #F59E0B;
+  --warning-foreground: #0F1115;
+  --info: #2563EB;
+  --info-foreground: #ffffff;
+  --border: #E6E8EA;
+  --input: #E6E8EA;
+  --ring: #DD6630; /* focus ring in brand */
+  /* keep chart colors reasonably distinct; can refine later */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* sidebar (if used) */
+  --sidebar: #FFF7F4;
+  --sidebar-foreground: #21272A;
+  --sidebar-primary: #DD6630;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #FFF2EC;
+  --sidebar-accent-foreground: #7A2E00;
+  --sidebar-border: #F0E6E1;
+  --sidebar-ring: #DD6630;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Brand-aligned dark theme */
+  --background: #0F1115;
+  --foreground: #F5F7FA;
+  --card: #14171B;
+  --card-foreground: #F5F7FA;
+  --popover: #14171B;
+  --popover-foreground: #F5F7FA;
+  --primary: #FFA16D; /* brighter on dark */
+  --primary-foreground: #0F1115;
+  --secondary: #1B1F24;
+  --secondary-foreground: #F5F7FA;
+  --muted: #1B1F24;
+  --muted-foreground: #A0A8B0;
+  --accent: #241A15; /* subtle brand tint bg */
+  --accent-foreground: #FFA16D;
+  --destructive: #F87171;
+  --success: #22C55E;
+  --success-foreground: #0F1115;
+  --warning: #F59E0B;
+  --warning-foreground: #0F1115;
+  --info: #60A5FA;
+  --info-foreground: #0F1115;
+  --border: #FFFFFF1A;
+  --input: #FFFFFF26;
+  --ring: #FFA16D;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #14171B;
+  --sidebar-foreground: #F5F7FA;
+  --sidebar-primary: #FFA16D;
+  --sidebar-primary-foreground: #0F1115;
+  --sidebar-accent: #241A15;
+  --sidebar-accent-foreground: #FFA16D;
+  --sidebar-border: #FFFFFF1A;
+  --sidebar-ring: #FFA16D;
 }
 
 @layer base {
@@ -142,33 +164,34 @@
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #832900;
+    color: var(--primary);
   }
 
   .heading-one {
     font-size: 54px;
     font-weight: 700;
     line-height: 110%;
-    color: #21272A;
+    color: var(--foreground);
   }
 
   .heading-two {
     font-size: 42px;
     font-weight: 700;
     line-height: 110%;
-    color: #21272A;
+    color: var(--foreground);
   }
 
   .body-text {
     font-size: 1.125rem;
     font-weight: 400;
     line-height: 140%;
-    color: #21272A;
+    color: var(--foreground);
   }
 
   .button-primary {
     padding: 24px 32px;
-    background-color: #DD6630;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
     line-height: 1;
     font-size: 1.25rem;
     font-weight: 500;
@@ -180,18 +203,18 @@
     line-height: 1;
     font-size: 1.25rem;
     font-weight: 500;
-    color: #DD6630;
-    border: 2px solid #DD6630;
+    color: var(--primary);
+    border: 2px solid var(--primary);
   }
 
   .button-secondary:hover {
-    background-color: #ffffff;
+    background-color: var(--accent);
   }
 
   .header-text {
     font-size: 1rem;
     font-weight: 500;
-    color: #21272A;
+    color: var(--foreground);
   }
 
   @media screen and (max-width: 500px) {

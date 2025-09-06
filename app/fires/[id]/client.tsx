@@ -353,6 +353,9 @@ export default function FireDetailsClient({
 
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
           <Badge variant="secondary" className="shadow-lg">Пожар #{fire.id}</Badge>
+          <Badge variant={deactStatus?.status === 'inactive' ? 'outline' : 'success'} className="shadow-lg">
+            {deactStatus?.status === 'inactive' ? 'Неактивен' : 'Активен'}
+          </Badge>
         </div>
 
         {!showZoneCreator && (
@@ -543,10 +546,10 @@ export default function FireDetailsClient({
               <div className="sticky top-0 z-10 border-b bg-background px-3 py-2 pt-[calc(env(safe-area-inset-top))] flex items-center justify-between gap-2">
                 <div className="inline-flex p-0.5 bg-muted rounded-full">
                   <Button size="sm" variant={activeChat === "fire" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("fire")}>
-                    Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
+                    Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
                   </Button>
                   <Button size="sm" variant={activeChat === "zone" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("zone")} disabled={!zoneConnect}>
-                    Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
+                    Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
                   </Button>
                   <Button size="sm" variant={activeChat === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("ai")}>
                     AI бот
@@ -585,10 +588,10 @@ export default function FireDetailsClient({
             <div className="flex items-center justify-between mb-2 gap-2">
               <div className="inline-flex p-0.5 bg-muted rounded-full">
                 <Button size="sm" variant={activeChat === "fire" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("fire")}>
-                  Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
+                  Общ чат {counts[fireConnect] ? <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">{counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}</span> : null}
                 </Button>
                 <Button size="sm" variant={activeChat === "zone" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("zone")} disabled={!zoneConnect}>
-                  Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
+                  Зона {myZone?.title ? `(${myZone.title})` : ""} {zoneConnect && counts[zoneConnect] ? <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">{counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}</span> : null}
                 </Button>
                 <Button size="sm" variant={activeChat === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setActiveChat("ai")}>
                   AI бот
@@ -631,7 +634,7 @@ export default function FireDetailsClient({
             <MessageCircle className="h-6 w-6" />
           </Button>
           {unreadCount > 0 && !chatOpen && (
-            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center shadow">
+            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-destructive text-white text-xs flex items-center justify-center shadow">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}

@@ -843,7 +843,7 @@ export default function ZoneDetailsClient({
                     >
                       Зона {z.title ? `(${z.title})` : ""}{" "}
                       {zoneConnect && counts?.[zoneConnect] ? (
-                        <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                        <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">
                           {counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}
                         </span>
                       ) : null}
@@ -856,7 +856,7 @@ export default function ZoneDetailsClient({
                     >
                       Чат за пожара{" "}
                       {counts?.[fireConnect] ? (
-                        <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                        <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">
                           {counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}
                         </span>
                       ) : null}
@@ -903,7 +903,7 @@ export default function ZoneDetailsClient({
                   >
                     Зона {z.title ? `(${z.title})` : ""}{" "}
                     {zoneConnect && counts?.[zoneConnect] ? (
-                      <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                      <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">
                         {counts[zoneConnect] > 99 ? "99+" : counts[zoneConnect]}
                       </span>
                     ) : null}
@@ -916,7 +916,7 @@ export default function ZoneDetailsClient({
                   >
                     Чат за пожара{" "}
                     {counts?.[fireConnect] ? (
-                      <span className="ml-1 text-xs bg-red-600 text-white rounded-full px-1">
+                      <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1">
                         {counts[fireConnect] > 99 ? "99+" : counts[fireConnect]}
                       </span>
                     ) : null}
@@ -967,7 +967,7 @@ export default function ZoneDetailsClient({
               <MessageCircle className="h-6 w-6" />
             </Button>
             {unreadCount > 0 && !chatOpen && (
-              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center shadow">
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-destructive text-white text-xs flex items-center justify-center shadow">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}

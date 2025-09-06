@@ -29,7 +29,7 @@ export default function ContactForm() {
   }
 
   return (
-    <section className="py-20 bg-[#fff8ed] w-full">
+    <section className="py-20 bg-accent w-full">
       <div className="max-w-2xl mx-auto px-4 text-center">
         <p className="caption">
           Подкрепи каузата
@@ -50,7 +50,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl className="bg-white">
+                  <FormControl className="bg-background">
                     <Input placeholder="Placeholder" {...field}/>
                   </FormControl>
                   <FormMessage />
@@ -65,7 +65,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl className="bg-white">
+                  <FormControl className="bg-background">
                     <Input placeholder="Placeholder" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -80,7 +80,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl className="bg-white">
+                  <FormControl className="bg-background">
                     <Input placeholder="Placeholder" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -95,7 +95,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl className="bg-white">
+                  <FormControl className="bg-background">
                     <Input placeholder="Placeholder" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -110,7 +110,7 @@ export default function ContactForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Label Name</FormLabel>
-                  <FormControl className="bg-white">
+                  <FormControl className="bg-background">
                     <Textarea placeholder="Placeholder" rows={4} {...field} />
                   </FormControl>
                   <FormMessage />

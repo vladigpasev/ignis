@@ -6,7 +6,7 @@ import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#E4572E] text-white py-12">
+    <footer className="bg-primary text-primary-foreground py-12">
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Logo + Social */}
         <div>
@@ -61,7 +61,7 @@ export default function Footer() {
             <li><Link href="#">Ресурси</Link></li>
             <li><Link href="#">Новини</Link></li>
           </ul>
-          <ul className="mt-6 space-y-2 text-sm text-white/80">
+          <ul className="mt-6 space-y-2 text-sm text-primary-foreground/80">
             <li><Link href="#">Общи условия</Link></li>
             <li><Link href="#">Политика за поверителност</Link></li>
             <li><Link href="#">Политика за закрила на детето</Link></li>
@@ -71,7 +71,7 @@ export default function Footer() {
         {/* Contacts */}
         <div>
           <h3 className="font-bold mb-3">Контакти</h3>
-          <ul className="space-y-2 text-sm text-white/80">
+          <ul className="space-y-2 text-sm text-primary-foreground/80">
             <li>0700 00 000 <br /> Общи въпроси</li>
             <li>0700 00 000 <br /> Консултации</li>
           </ul>
@@ -84,11 +84,11 @@ export default function Footer() {
             <input
               type="email"
               placeholder="Имейл"
-              className="px-4 py-2 rounded-[12px] w-full text-black focus:outline-none bg-white"
+              className="px-4 py-2 rounded-[12px] w-full text-foreground bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <button
               type="submit"
-              className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-[12px]"
+              className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground px-4 py-2 rounded-[12px]"
             >
               Абонирай се
             </button>
