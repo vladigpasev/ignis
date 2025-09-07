@@ -417,3 +417,36 @@ export const fireAiThreads = pgTable(
     userIdx: index('fire_ai_threads_user_idx').on(t.userId),
   })
 );
+
+// ---------- USER CERTIFICATES ----------
+export const userCertificates = pgTable(
+  'user_certificates',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    // YYYY-MM (e.g., 2025-09)
+    period: varchar('period', { length: 7 }).notNull(),
+    title: varchar('title', { length: 200 }),
+    summary: text('summary'),
+    traits: jsonb('traits').$type<{ name: string; description: string; evidence?: string[]; score?: number }[] | null>(),
+    metrics: jsonb('metrics').$type<Record<string, number> | null>(),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    userIdx: index('user_cert_user_idx').on(t.userId),
+    uniquePeriod: uniqueIndex('user_cert_unique_period').on(t.userId, t.period),
+  })
+);
+
+export type UserCertificate = {
+  id: number;
+  userId: number;
+  period: string; // YYYY-MM
+  title: string | null;
+  summary: string | null;
+  traits: { name: string; description: string; evidence?: string[]; score?: number }[] | null;
+  metrics: Record<string, number> | null;
+  data: any;
+  createdAt: Date;
+};

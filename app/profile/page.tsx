@@ -9,6 +9,7 @@ import VolunteerProfileSection from "@/components/volunteers/volunteer-profile-s
 import SubscriptionsGrid from "@/components/subscriptions/subscriptions-grid";
 import FiresHeader from "@/components/fires/fires-header";
 import { ArrowLeft } from "lucide-react";
+import CertificatesSection from "@/components/certificates/certificates-section";
 
 export default async function ProfilePage() {
   const session = await auth0.getSession()
@@ -55,6 +56,8 @@ export default async function ProfilePage() {
           <VolunteerProfileServer email={user.email!} />
           {/* Subscriptions */}
           <SubscriptionsList email={user.email!} />
+          {/* Certificates */}
+          <CertificatesSection email={user.email!} />
         </CardContent>
       </Card>
     </main>
