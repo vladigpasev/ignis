@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { notificationSubscriptions, users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
 import crypto from "node:crypto";
 
@@ -35,20 +35,48 @@ export async function POST(req: Request) {
       [me] = await db.insert(users).values({ email: authUser.email, name: authUser.name ?? null }).returning();
     }
 
-    const unsubscribeToken = crypto.randomBytes(16).toString('hex');
+    // If user already has an active subscription for the exact same center+radius,
+    // treat this as an update instead of creating a duplicate (which would spam).
+    const [existing] = await db
+      .select()
+      .from(notificationSubscriptions)
+      .where(
+        and(
+          eq(notificationSubscriptions.userId, me.id),
+          eq(notificationSubscriptions.lat, lat),
+          eq(notificationSubscriptions.lng, lng),
+          eq(notificationSubscriptions.radiusKm, radiusKm),
+          eq(notificationSubscriptions.active, 1),
+        ),
+      )
+      .limit(1);
 
-    const [row] = await db.insert(notificationSubscriptions).values({
-      userId: me.id,
-      email: authUser.email,
-      phone: phone || null,
-      lat,
-      lng,
-      radiusKm,
-      sourceFirms,
-      sourceReports,
-      active: 1,
-      unsubscribeToken,
-    }).returning();
+    let row;
+    if (existing) {
+      // Update contact details and timestamp, keep same unsubscribe token
+      [row] = await db
+        .update(notificationSubscriptions)
+        .set({ email: authUser.email, phone: phone || null, updatedAt: new Date() })
+        .where(eq(notificationSubscriptions.id, existing.id))
+        .returning();
+    } else {
+      const unsubscribeToken = crypto.randomBytes(16).toString('hex');
+      [row] = await db
+        .insert(notificationSubscriptions)
+        .values({
+          userId: me.id,
+          email: authUser.email,
+          phone: phone || null,
+          lat,
+          lng,
+          radiusKm,
+          sourceFirms,
+          sourceReports,
+          active: 1,
+          unsubscribeToken,
+        })
+        .returning();
+    }
 
     return NextResponse.json({ ok: true, subscription: row });
   } catch (e: any) {

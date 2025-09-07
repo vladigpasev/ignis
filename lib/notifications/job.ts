@@ -76,7 +76,9 @@ export async function runNotificationsJob({
           lte(fires.lat, bbox[3]),
           gte(fires.lng, bbox[0]),
           lte(fires.lng, bbox[2]),
-          eq(fires.status, 'active')
+          eq(fires.status, 'active'),
+          // Only notify for fires created after the subscription was created
+          gte(fires.createdAt, sub.createdAt as any)
         ))
         .orderBy(desc(fires.createdAt));
       let sent = 0;
