@@ -14,7 +14,7 @@ export default async function PastFiresPage() {
     <div className="w-full min-h-screen">
       <div className="max-w-6xl mx-auto w-full px-4 py-6">
         <h1 className="text-2xl font-semibold mb-4">Минали (неактивни) пожари</h1>
-        <FireList fires={fires as any} title="Минали пожари" />
+        <FireList fires={fires as any} title="Минали пожари" showTitle={false} showFocusButton={false} />
       </div>
     </div>
   );

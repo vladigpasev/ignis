@@ -13,4 +13,5 @@ export function openai(): OpenAI {
   return _client;
 }
 
-export const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5-mini"; // fast + cost‑effective
+// Use a model compatible with the Assistants API
+export const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini"; // fast + cost‑effective

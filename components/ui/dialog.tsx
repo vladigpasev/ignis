@@ -30,7 +30,10 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-[95vw] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 left-1/2 top-1/2 rounded-lg",
+        // Mobile: full-screen, scrollable; Desktop: centered card
+        "fixed z-50 grid inset-0 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:translate-x-[-50%] sm:translate-y-[-50%] bg-background shadow-lg duration-200",
+        // Sizing and chrome
+        "w-full h-full max-w-none p-0 sm:w-[95vw] sm:max-w-lg sm:h-auto sm:max-h-[90vh] sm:p-6 border sm:rounded-lg",
         className
       )}
       {...props}
@@ -73,4 +76,3 @@ export {
   DialogDescription,
   DialogClose,
 }
-

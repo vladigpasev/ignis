@@ -6,7 +6,7 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 async function main() {
   const asst = await client.beta.assistants.create({
     name: 'Test Assistant',
-    model: process.env.OPENAI_MODEL || 'gpt-5-mini',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     instructions: 'Отговаряй сбито на български.'
   });
   const thread = await client.beta.threads.create();

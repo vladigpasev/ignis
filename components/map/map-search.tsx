@@ -106,7 +106,7 @@ export default function MapSearch() {
 
   return (
     <>
-      <section className="absolute top-4 left-1/2 sm:left-4 z-10 w-[90vw] sm:w-[350px] -translate-x-1/2 sm:translate-x-0 rounded-lg shadow-lg">
+      <section className="absolute top-4 left-1/2 sm:left-4 z-30 w-[90vw] sm:w-[350px] -translate-x-1/2 sm:translate-x-0 rounded-lg shadow-lg">
         <Command className="rounded-lg">
           <div className={cn("w-full flex items-center justify-between px-3 gap-1", isOpen && "border-b")}>
             <CommandInput placeholder="Търси локация..." value={displayValue} onValueChange={handleInputChange} className="flex-1" />

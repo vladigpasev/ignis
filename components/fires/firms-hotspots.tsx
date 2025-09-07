@@ -65,8 +65,7 @@ export default function FirmsHotspots({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [isLoadedOnce, setIsLoadedOnce] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // removed loading/count UI state to reduce overlay clutter
 
   // === FETCH bbox ===
   const fetchRef = useRef<AbortController | null>(null);
@@ -107,7 +106,6 @@ export default function FirmsHotspots({
     fetchRef.current = controller;
 
     (async () => {
-      setIsLoading(true);
       try {
         const params = new URLSearchParams();
         params.set("bbox", debouncedBbox);
@@ -121,7 +119,6 @@ export default function FirmsHotspots({
         if (j?.ok) {
           const next: any[] = Array.isArray(j.hotspots) ? j.hotspots : [];
           if (next.length >= 0) setHotspots(next as any);
-          setIsLoadedOnce(true);
         } else {
           console.error("FIRMS error:", j?.error);
         }
@@ -130,7 +127,7 @@ export default function FirmsHotspots({
           console.error(e);
         }
       } finally {
-        setIsLoading(false);
+        // no-op
       }
     })();
 
@@ -261,11 +258,20 @@ export default function FirmsHotspots({
   const promoteToFire = (h: FirmsHotspot) => {
     startTransition(async () => {
       try {
-        const fd = new FormData();
-        fd.set("lat", String(h.lat));
-        fd.set("lng", String(h.lng));
-        fd.set("radiusM", String(h.radiusM));
-        await createAction(fd);
+        const res = await fetch('/api/fires', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lat: h.lat, lng: h.lng, radiusM: h.radiusM }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || !j?.ok) {
+          const msg = j?.error || res.statusText;
+          if (res.status === 403 || /профил/i.test(msg) || /ProfileIncomplete/i.test(msg)) {
+            try { window.dispatchEvent(new Event('open-volunteer-modal')); } catch {}
+            return;
+          }
+          throw new Error(msg || 'Неуспешно създаване.');
+        }
         setHotspots((prev) => prev.filter((x) => x.id !== h.id));
         setSelectedId(null);
       } catch (e: any) {
@@ -276,18 +282,7 @@ export default function FirmsHotspots({
 
   return (
     <>
-      {/* Индикатор за live състояние */}
-      <div className="absolute top-4 right-[11.5rem] sm:right-[13rem] z-10">
-        {isLoading ? (
-          <div className="bg-background/90 border rounded-lg shadow-lg px-2 py-1 text-xs">
-            Зареждане FIRMS…
-          </div>
-        ) : isLoadedOnce ? (
-          <div className="bg-background/90 border rounded-lg shadow-lg px-2 py-1 text-xs">
-            FIRMS: {visibleHotspots.length} групи
-          </div>
-        ) : null}
-      </div>
+      {/* Индикаторите за броя групи са премахнати за да освободи място */}
 
       {/* DOM пинове */}
       {visibleHotspots.slice(0, maxMarkers).map((h) => (

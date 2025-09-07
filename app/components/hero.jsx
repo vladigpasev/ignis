@@ -2,8 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useUser } from "@auth0/nextjs-auth0";
 
 export default function Hero() {
+  const { user } = useUser();
+  const href = user ? "/fires" : "/auth/login?screen_hint=signup&returnTo=/fires";
+
   return (
     <section className="relative w-full h-[600px] flex items-center justify-center">
       {/* Background Image */}
@@ -35,12 +39,16 @@ export default function Hero() {
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button className="button-primary">
-              Стани доброволец &rarr;
-            </Button>
-            <Button className="button-secondary">
-              Вече си доброволец &rarr;
-            </Button>
+            <a href={href}>
+              <Button className="button-primary">
+                Стани доброволец &rarr;
+              </Button>
+            </a>
+            <a href="/fires">
+              <Button className="button-secondary">
+                Виж активните пожари &rarr;
+              </Button>
+            </a>
           </div>
         </div>
       </div>

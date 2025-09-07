@@ -1,10 +1,14 @@
 import { auth0 } from "@/lib/auth0"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { db } from "@/lib/db";
-import { notificationSubscriptions, users } from "@/lib/db/schema";
+import { notificationSubscriptions, users, volunteerProfiles } from "@/lib/db/schema";
 import { and, desc, eq } from "drizzle-orm";
+import VolunteerProfileSection from "@/components/volunteers/volunteer-profile-section";
+import SubscriptionsGrid from "@/components/subscriptions/subscriptions-grid";
+import FiresHeader from "@/components/fires/fires-header";
+import { ArrowLeft } from "lucide-react";
 
 export default async function ProfilePage() {
   const session = await auth0.getSession()
@@ -29,19 +33,41 @@ export default async function ProfilePage() {
   }
 
   return (
+    <>
+    <FiresHeader />
     <main className="container mx-auto p-6">
       <Card className="max-w-3xl mx-auto">
-        <CardHeader>
+        <CardHeader className="relative">
           <CardTitle>Profile</CardTitle>
+          <CardAction>
+            <Button asChild variant="outline" size="sm" className="rounded-full">
+              <Link href="/fires" className="no-underline">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1.5">Назад към пожарите</span>
+              </Link>
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent className="space-y-6">
           <UserHeader user={user} />
+          {/* Volunteer profile */}
+          {/* Server-side fetch of the user's volunteer profile */}
+          {/* @ts-expect-error Async Server Component below */}
+          <VolunteerProfileServer email={user.email!} />
           {/* Subscriptions */}
           <SubscriptionsList email={user.email!} />
         </CardContent>
       </Card>
     </main>
+    </>
   )
+}
+
+async function VolunteerProfileServer({ email }: { email: string }) {
+  const [me] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (!me) return null;
+  const [profile] = await db.select().from(volunteerProfiles).where(eq(volunteerProfiles.userId, me.id)).limit(1);
+  return <VolunteerProfileSection profile={profile || null} />;
 }
 
 async function SubscriptionsList({ email }: { email: string }) {
@@ -53,47 +79,19 @@ async function SubscriptionsList({ email }: { email: string }) {
     .where(eq(notificationSubscriptions.userId, me.id))
     .orderBy(desc(notificationSubscriptions.createdAt));
 
-  async function removeSub(id: number) {
-    "use server";
-    // Soft-delete by setting active=0 for the current user
-    await db
-      .update(notificationSubscriptions)
-      .set({ active: 0, updatedAt: new Date() })
-      .where(and(eq(notificationSubscriptions.id, id), eq(notificationSubscriptions.userId, me.id)));
-  }
-
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold">Моите абонаменти</h3>
-      {subs.length === 0 && <p className="text-sm text-muted-foreground">Нямате активни абонаменти.</p>}
-      {subs.length > 0 && (
-        <div className="border rounded-md overflow-hidden">
-          <div className="grid grid-cols-6 gap-2 p-2 text-xs font-medium bg-gray-50">
-            <div>Статус</div>
-            <div>Имейл</div>
-            <div>Телефон</div>
-            <div>Координати</div>
-            <div>Радиус (км)</div>
-            <div>Действия</div>
-          </div>
-          {subs.map((s) => (
-            <form action={removeSub.bind(null, s.id)} key={s.id} className="grid grid-cols-6 gap-2 p-2 items-center border-t text-sm">
-              <div>{s.active ? 'Активен' : 'Спрян'}</div>
-              <div className="truncate">{s.email || '-'}</div>
-              <div className="truncate">{s.phone || '-'}</div>
-              <div className="truncate">{s.lat.toFixed(4)}, {s.lng.toFixed(4)}</div>
-              <div>{s.radiusKm}</div>
-              <div className="flex gap-2">
-                {s.active === 1 && (
-                  <Button type="submit" size="sm" variant="outline">Прекрати</Button>
-                )}
-                {s.unsubscribeToken && (
-                  <a href={`/u/${s.unsubscribeToken}`} className="text-xs underline">Линк за отписване</a>
-                )}
-              </div>
-            </form>
-          ))}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="font-semibold">Моите абонаменти</h3>
+        <div className="text-xs text-muted-foreground">Общо: {subs.length}</div>
+      </div>
+      {subs.length === 0 ? (
+        <div className="rounded-lg border p-6 text-center space-y-2">
+          <div className="text-sm text-muted-foreground">Нямате абонаменти за известия.</div>
+          <div className="text-sm text-muted-foreground">Създайте абонамент от бутона „Получавай известия“ в горната навигация.</div>
         </div>
+      ) : (
+        <SubscriptionsGrid subs={subs as any} />
       )}
     </div>
   );

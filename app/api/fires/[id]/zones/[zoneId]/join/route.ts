@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { zones, zoneMembers, users, fireVolunteers, fires, fireDeactivationVotes } from "@/lib/db/schema";
+import { zones, zoneMembers, users, fireVolunteers, fires, fireDeactivationVotes, volunteerProfiles } from "@/lib/db/schema";
 import { ensureSbUser, getOrCreateZoneChannel, joinUserToChannel } from "@/lib/sendbird";
 import { auth0 } from "@/lib/auth0";
 import { and, eq } from "drizzle-orm";
@@ -24,6 +24,15 @@ async function requireConfirmedVolunteer(fireId: number, userId: number) {
     .limit(1);
   if (!rows.length) throw new Error("Forbidden");
 }
+async function requireVolunteerCompleted(userId: number) {
+  const rows = await db
+    .select({ c: volunteerProfiles.completedAt })
+    .from(volunteerProfiles)
+    .where(eq(volunteerProfiles.userId, userId))
+    .limit(1);
+  const ok = rows.length > 0 && !!rows[0].c;
+  if (!ok) throw new Error("ProfileIncomplete");
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; zoneId: string }> }) {
   try {
@@ -34,6 +43,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const me = await getLocalUser();
     if (!me) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    // Gate: must have completed volunteer profile
+    try {
+      await requireVolunteerCompleted(me.id);
+    } catch (e: any) {
+      if (e?.message === 'ProfileIncomplete') {
+        return NextResponse.json({ ok: false, error: "Моля, попълни профила на доброволец." }, { status: 403 });
+      }
+      throw e;
+    }
 
     await requireConfirmedVolunteer(fireId, me.id);
 

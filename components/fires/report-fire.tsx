@@ -85,20 +85,25 @@ export default function ReportFire({ action }: Props) {
 
   // Click върху картата при режим "докладване"
   useEffect(() => {
-    if (!map) return;
-    if (!isReporting) return;
+    if (!map || !isReporting) return;
 
     const onClick = (e: any) => {
-      const { lng, lat } = e.lngLat;
-      setPoint({ lat, lng });
+      const { lng, lat } = e?.lngLat || {};
+      if (typeof lng === 'number' && typeof lat === 'number') setPoint({ lat, lng });
     };
 
-    map.getCanvas().style.cursor = "crosshair";
-    map.on("click", onClick);
+    try {
+      const canvas = (map as any)?.getCanvas?.();
+      if (canvas && canvas.style) canvas.style.cursor = "crosshair";
+    } catch {}
+    try { map.on("click", onClick); } catch {}
 
     return () => {
-      map.off("click", onClick);
-      map.getCanvas().style.cursor = "";
+      try { map.off("click", onClick); } catch {}
+      try {
+        const canvas = (map as any)?.getCanvas?.();
+        if (canvas && canvas.style) canvas.style.cursor = "";
+      } catch {}
     };
   }, [map, isReporting]);
 
@@ -121,13 +126,18 @@ export default function ReportFire({ action }: Props) {
         router.refresh();
         cancelReporting();
       } catch (e: any) {
-        alert(e?.message || "Неуспешно създаване.");
+        const msg = e?.message || '';
+        if (msg === 'ProfileIncomplete' || /профил/i.test(msg)) {
+          try { window.dispatchEvent(new Event('open-volunteer-modal')); } catch {}
+        } else {
+          alert(msg || "Неуспешно създаване.");
+        }
       }
     });
   };
 
   return (
-    <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+    <div className="absolute top-20 sm:top-4 right-4 z-10 flex flex-col items-end gap-2">
       {!isLoading && !user && (
         <div className="bg-background/90 border rounded-lg shadow-lg p-3 max-w-[320px]">
           <div className="text-sm mb-2">За да докладваш пожар, влез в профила си.</div>
@@ -177,7 +187,14 @@ export default function ReportFire({ action }: Props) {
             </div>
           </div>
 
-          <form action={onSubmit} className="mt-3 flex gap-2 items-center">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              onSubmit(fd);
+            }}
+            className="mt-3 flex gap-2 items-center"
+          >
             <input type="hidden" name="lat" value={point?.lat ?? ""} />
             <input type="hidden" name="lng" value={point?.lng ?? ""} />
             <input type="hidden" name="radiusM" value={radius} />
