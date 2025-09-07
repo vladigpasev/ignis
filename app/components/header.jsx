@@ -35,19 +35,19 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-[21px]">
           <nav className="flex items-center gap-8">
             <Link
-              href="#"
+              href="#features"
               className="text-[18px] text-foreground hover:text-primary"
             >
-              За нас
+              Истории
             </Link>
             <Link
-              href="#"
+              href="#faq"
               className="text-[18px] text-foreground hover:text-primary"
             >
-              HeatMap
+              ЧЗВ
             </Link>
             <Link
-              href="#"
+              href="#contact"
               className="text-[18px] text-foreground hover:text-primary"
             >
               Подкрепи

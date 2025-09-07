@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 
-export default function Features() {
+export default function Feature() {
   const features = [
     {
       title: "Спасените животни на Анна",

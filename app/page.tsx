@@ -11,10 +11,20 @@ export default function Home() {
       <Header />
       <Hero />
       <div className="max-w-[1280px] mx-auto">
+        
+      <section id="features">
         <Feature />
+      </section>
+        
+      <section id="faq">
         <FAQ />
+      </section>
+        
       </div>
-      <ContactForm />
+      
+      <section id="contact">
+        <ContactForm />
+      </section>
       <Footer />
     </div>
   );
