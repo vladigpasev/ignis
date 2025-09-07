@@ -171,7 +171,7 @@ export default function SubscribeModal() {
         </Button>
       </DialogTrigger>
       {/* Wider, polished desktop layout */}
-      <DialogContent className="w-[98vw] max-w-[1320px] md:max-w-[1400px] p-0 overflow-hidden rounded-xl border shadow-2xl">
+      <DialogContent className="w-[98vw] max-w-[1320px] md:max-w-[1400px] p-0 max-h-[90vh] overflow-y-auto md:overflow-hidden rounded-xl border shadow-2xl">
         <div className="grid md:grid-cols-[1.8fr_1fr] gap-0 md:h-[80vh] md:max-h-[900px]">
           {/* Map + Search */}
           <div className="relative bg-muted/20">
@@ -219,7 +219,7 @@ export default function SubscribeModal() {
           </div>
 
           {/* Form */}
-          <div className="flex flex-col border-l bg-background p-5 md:p-6 gap-4">
+          <div className="flex flex-col border-t md:border-t-0 md:border-l bg-background p-5 md:p-6 gap-4">
             <DialogHeader>
               <DialogTitle className="text-lg md:text-xl">Известия за пожари в район</DialogTitle>
             </DialogHeader>
