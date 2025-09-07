@@ -170,36 +170,41 @@ export default function SubscribeModal() {
           Получавай известия
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[96vw] max-w-[1040px] p-0 overflow-hidden">
-        <div className="grid md:grid-cols-[2fr_1fr] gap-0 md:h-[80vh] md:max-h-[860px]">
-          <div className="relative">
-            <div className="absolute z-10 w-full p-4">
-              <div className="bg-background/90 backdrop-blur-sm rounded-md shadow flex items-center gap-2 p-2">
-                <Input
-                  placeholder="Търси адрес или място…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onFocus={() => query && setSuggestOpen(true)}
-                />
-                <Button type="button" variant="outline" onClick={useMyLocation}>Моята локация</Button>
-              </div>
-              {suggestOpen && suggestions.length > 0 && (
-                <div className="mt-2 bg-background/95 backdrop-blur rounded-md shadow max-h-60 overflow-auto">
-                  {suggestions.map((f: any) => (
-                    <button
-                      key={f.id}
-                      onClick={() => { setCenter([f.center[0], f.center[1]]); setSuggestOpen(false); setQuery(f.place_name || ''); }}
-                      className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
-                    >
-                      {f.text || f.place_name}
-                      <div className="text-[11px] text-muted-foreground">{f.place_name}</div>
-                    </button>
-                  ))}
+      {/* Wider, polished desktop layout */}
+      <DialogContent className="w-[98vw] max-w-[1320px] md:max-w-[1400px] p-0 overflow-hidden rounded-xl border shadow-2xl">
+        <div className="grid md:grid-cols-[1.8fr_1fr] gap-0 md:h-[80vh] md:max-h-[900px]">
+          {/* Map + Search */}
+          <div className="relative bg-muted/20">
+            <div className="absolute z-10 w-full p-4 md:p-5 pointer-events-none">
+              <div className="max-w-[620px] pointer-events-auto">
+                <div className="bg-background/90 backdrop-blur rounded-lg shadow-lg border flex items-center gap-2 p-2.5">
+                  <Input
+                    placeholder="Търси адрес или място…"
+                    aria-label="Търси адрес или място"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onFocus={() => query && setSuggestOpen(true)}
+                  />
+                  <Button type="button" variant="outline" onClick={useMyLocation} className="whitespace-nowrap">Моята локация</Button>
                 </div>
-              )}
+                {suggestOpen && suggestions.length > 0 && (
+                  <div className="mt-2 bg-background/90 backdrop-blur rounded-lg shadow-lg border max-h-72 overflow-auto">
+                    {suggestions.map((f: any) => (
+                      <button
+                        key={f.id}
+                        onClick={() => { setCenter([f.center[0], f.center[1]]); setSuggestOpen(false); setQuery(f.place_name || ''); }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-accent focus:bg-accent focus:outline-none text-sm"
+                      >
+                        <div className="font-medium text-foreground">{f.text || f.place_name}</div>
+                        <div className="text-[11px] text-muted-foreground">{f.place_name}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div ref={mapRef} className="h-[52vh] md:h-full" />
+            <div ref={mapRef} className="h-[52vh] md:h-full ring-1 ring-border" />
 
             {/* Map init */}
             <MapProvider
@@ -213,44 +218,50 @@ export default function SubscribeModal() {
             </MapProvider>
           </div>
 
-          <div className="flex flex-col border-l bg-background p-5 gap-4">
+          {/* Form */}
+          <div className="flex flex-col border-l bg-background p-5 md:p-6 gap-4">
             <DialogHeader>
-              <DialogTitle>Настройка на известия</DialogTitle>
+              <DialogTitle className="text-lg md:text-xl">Известия за пожари в район</DialogTitle>
             </DialogHeader>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
+            <form onSubmit={onSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 gap-4">
                 {!isLoading && !user && (
-                  <div className="p-3 rounded-md bg-accent text-foreground text-sm">
+                  <div className="p-3.5 rounded-lg bg-accent/40 text-foreground text-sm border">
                     За да създадете абонамент за известия, моля <a className="underline" href="/auth/login">влезте в профила си</a>.
                   </div>
                 )}
                 {!!user && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Имейл</Label>
-                      <Input value={user.email || ''} readOnly />
+                      <Input value={user.email || ''} readOnly aria-readonly="true"/>
                     </div>
                     <div>
                       <Label htmlFor="phone">Телефон (по избор)</Label>
-                      <Input id="phone" placeholder="3598XXXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                      <Input id="phone" placeholder="3598XXXXXXXX" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <Label>Радиус: {radiusKm} км</Label>
-                  <input type="range" min={1} max={200} value={radiusKm} onChange={(e) => setRadiusKm(Number(e.target.value))} className="w-full" />
+                  <Label id="radius-label">Радиус: {radiusKm} км</Label>
+                  <input aria-labelledby="radius-label" type="range" min={1} max={200} value={radiusKm} onChange={(e) => setRadiusKm(Number(e.target.value))} className="w-full accent-orange-500" />
                   <p className="text-xs text-muted-foreground mt-1">Препоръка: 10–25 км</p>
                 </div>
 
-                {/* Only reported fires are used for notifications */}
-
-                <div className="text-xs text-muted-foreground">Избрано: {center[1].toFixed(5)}, {center[0].toFixed(5)}</div>
-                {msg && <div className="text-sm text-foreground">{msg}</div>}
+                <div className="text-xs text-muted-foreground">Избрани координати: {center[1].toFixed(5)}, {center[0].toFixed(5)}</div>
+                {msg && (
+                  <div role="status" aria-live="polite" className="text-sm px-3 py-2 rounded-md border bg-background/60">
+                    {msg}
+                  </div>
+                )}
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Затвори</Button>
-                <Button type="submit" disabled={loading || !user}>{loading ? 'Записване…' : 'Запиши'}</Button>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">Можете да се отпишете по всяко време от линка в имейла/SMS.</p>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Затвори</Button>
+                  <Button type="submit" disabled={loading || !user}>{loading ? 'Записване…' : 'Запиши'}</Button>
+                </div>
               </div>
             </form>
           </div>

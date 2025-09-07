@@ -12,6 +12,7 @@ import UserLocationMarker from "@/components/fires/user-location-marker";
 import ReportFire from "@/components/fires/report-fire";
 import FireList from "@/components/fires/fire-list";
 import { haversineMeters } from "@/lib/geo";
+import dynamic from "next/dynamic";
 
 // 🆕 FIRMS
 import FirmsHotspots from "@/components/fires/firms-hotspots";
@@ -24,6 +25,7 @@ export default function HomeClient({
   initialFires: FireItem[];
   createAction: (formData: FormData) => Promise<void>;
 }) {
+  const SubscribeModal = dynamic(() => import("@/app/components/subscribe-modal"), { ssr: false });
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
   const defaultCenter = useMemo<LatLng>(() => ({ lat: 42.6977, lng: 23.3219 }), []); // Sofia
@@ -124,6 +126,20 @@ export default function HomeClient({
             />
           )}
         </MapProvider>
+      </div>
+
+      {/* Inline Subscribe CTA (below map, above list) */}
+      <div className="max-w-6xl mx-auto w-full px-4 mt-4">
+        <div className="rounded-xl border bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-yellow-500/10 p-4 md:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div className="text-sm text-muted-foreground">Абонирай се за известия</div>
+            <div className="text-base md:text-lg font-medium">Получавай известия за пожари във вашия район</div>
+            <div className="text-xs md:text-sm text-muted-foreground">Избери точка на картата и радиус. Отписване по всяко време.</div>
+          </div>
+          <div className="shrink-0">
+            <SubscribeModal />
+          </div>
+        </div>
       </div>
 
       <div className="mt-6">
