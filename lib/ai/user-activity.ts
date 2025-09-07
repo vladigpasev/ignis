@@ -34,7 +34,7 @@ export async function buildUserActivity(userId: number, window: ActivityWindow):
   const updates = await db
     .select({ id: zoneUpdates.id, text: zoneUpdates.text, createdAt: zoneUpdates.createdAt, zoneId: zoneUpdates.zoneId, fireId: zones.fireId })
     .from(zoneUpdates)
-    .leftJoin(zones, eq(zones.id, zoneUpdates.zoneId))
+    .innerJoin(zones, eq(zones.id, zoneUpdates.zoneId))
     .where(and(eq(zoneUpdates.userId, userId), gte(zoneUpdates.createdAt, start), lte(zoneUpdates.createdAt, end)))
     .orderBy(desc(zoneUpdates.createdAt));
 
