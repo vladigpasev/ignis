@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { JSX } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,7 @@ type VolunteerProfile = {
   availability: string | null;
   firstAid: number | null; // 1/0
   agreeContact: number | null; // 1/0
-  completedAt: string | null;
+  completedAt: Date | string | null;
 };
 
 export default function VolunteerProfileSection({ profile }: { profile: VolunteerProfile | null }) {

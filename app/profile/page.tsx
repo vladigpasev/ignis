@@ -52,7 +52,6 @@ export default async function ProfilePage() {
           <UserHeader user={user} />
           {/* Volunteer profile */}
           {/* Server-side fetch of the user's volunteer profile */}
-          {/* @ts-expect-error Async Server Component below */}
           <VolunteerProfileServer email={user.email!} />
           {/* Subscriptions */}
           <SubscriptionsList email={user.email!} />

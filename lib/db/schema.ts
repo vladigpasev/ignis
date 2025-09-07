@@ -86,8 +86,10 @@ export const volunteerProfiles = pgTable(
     lng: doublePrecision('lng'),
     bio: text('bio'),
     motivation: text('motivation'),
-    skills: jsonb('skills'), // array of strings
-    transport: jsonb('transport'), // { car?: boolean, suv4x4?: boolean, truck?: boolean, motorcycle?: boolean }
+    // array of strings
+    skills: jsonb('skills').$type<string[] | null>(),
+    // { car?: boolean, suv4x4?: boolean, truck?: boolean, motorcycle?: boolean }
+    transport: jsonb('transport').$type<{ car?: boolean; suv4x4?: boolean; truck?: boolean; motorcycle?: boolean } | null>(),
     availability: varchar('availability', { length: 64 }), // 'weekdays' | 'weekends' | 'evenings' | 'anytime'
     firstAid: integer('first_aid'), // 1/0
     agreeContact: integer('agree_contact'), // 1/0
