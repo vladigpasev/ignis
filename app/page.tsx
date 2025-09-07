@@ -9,24 +9,24 @@ export default function Home() {
   return (
     <div>
       <Header />
-      <Hero />
-      <div className="max-w-[1280px] mx-auto">
-        
-      <section id="features">
-        <Feature />
-      </section>
-        
-      <section id="faq">
-        <FAQ />
-      </section>
-        
+      {/* Offset content for fixed header to avoid overlap */}
+      <div className="pt-16 md:pt-20">
+        <Hero />
+        <div className="max-w-[1280px] mx-auto">
+          <section id="features" className="scroll-mt-28">
+            <Feature />
+          </section>
+
+          <section id="faq" className="scroll-mt-28">
+            <FAQ />
+          </section>
+        </div>
+
+        <section id="contact" className="scroll-mt-28">
+          <ContactForm />
+        </section>
       </div>
-      
-      <section id="contact">
-        <ContactForm />
-      </section>
       <Footer />
     </div>
   );
 }
-

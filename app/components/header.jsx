@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
@@ -16,10 +16,30 @@ const SubscribeModal = dynamic(() => import("./subscribe-modal"), { ssr: false }
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="w-full border-b border-border bg-background pt-2 pb-2">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 w-full border-b border-border/60 transition-all duration-300",
+        scrolled
+          ? "bg-background/80 backdrop-blur-md shadow-sm"
+          : "bg-background/70 backdrop-blur"
+      )}
+    >
+      <div
+        className={cn(
+          "max-w-7xl mx-auto px-4 flex items-center justify-between",
+          scrolled ? "py-2" : "py-3"
+        )}
+      >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image
@@ -36,19 +56,19 @@ export default function Header() {
           <nav className="flex items-center gap-8">
             <Link
               href="#features"
-              className="text-[18px] text-foreground hover:text-primary"
+              className="text-[18px] text-foreground hover:text-primary transition-colors"
             >
               Истории
             </Link>
             <Link
               href="#faq"
-              className="text-[18px] text-foreground hover:text-primary"
+              className="text-[18px] text-foreground hover:text-primary transition-colors"
             >
               ЧЗВ
             </Link>
             <Link
               href="#contact"
-              className="text-[18px] text-foreground hover:text-primary"
+              className="text-[18px] text-foreground hover:text-primary transition-colors"
             >
               Подкрепи
             </Link>
@@ -79,22 +99,25 @@ export default function Header() {
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
-        <div className="md:hidden bg-background border-t border-border px-4 py-4 flex flex-col gap-4">
+        <div className="md:hidden bg-background/95 backdrop-blur border-t border-border px-4 py-4 flex flex-col gap-4 shadow-sm">
           <Link
-            href="#"
-            className="text-[18px] text-foreground hover:text-primary"
+            href="#features"
+            onClick={() => setIsOpen(false)}
+            className="text-[18px] text-foreground hover:text-primary transition-colors"
           >
-            За нас
+            Истории
           </Link>
           <Link
-            href="#"
-            className="text-[18px] text-foreground hover:text-primary"
+            href="#faq"
+            onClick={() => setIsOpen(false)}
+            className="text-[18px] text-foreground hover:text-primary transition-colors"
           >
-            HeatMap
+            ЧЗВ
           </Link>
           <Link
-            href="#"
-            className="text-[18px] text-foreground hover:text-primary"
+            href="#contact"
+            onClick={() => setIsOpen(false)}
+            className="text-[18px] text-foreground hover:text-primary transition-colors"
           >
             Подкрепи
           </Link>
