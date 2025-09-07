@@ -22,6 +22,7 @@ import { useSendbirdUnreadMany } from "@/hooks/useSendbirdUnreadMany";
 import type mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
 import { useSendbirdUnread } from "@/hooks/useSendbirdUnread";
+import VolunteerModal from "@/components/volunteers/volunteer-modal";
 
 type Fire = {
   id: number;
@@ -126,6 +127,20 @@ export default function FireDetailsClient({
   const [activeChat, setActiveChat] = useState<"fire" | "zone" | "ai">("fire");
   // local ref to map instance captured on load
   const [mapReady, setMapReady] = useState(false);
+  // volunteer modal gating
+  const [volModalOpen, setVolModalOpen] = useState(false);
+  const [volCompleted, setVolCompleted] = useState<boolean | null>(null);
+  const [pendingAction, setPendingAction] = useState<null | 'claim'>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/me/volunteer-profile', { cache: 'no-store' });
+        if (!r.ok) { setVolCompleted(null); return; }
+        const j = await r.json();
+        setVolCompleted(!!j?.completed);
+      } catch { setVolCompleted(null); }
+    })();
+  }, []);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   useEffect(() => {
@@ -147,16 +162,33 @@ export default function FireDetailsClient({
   const centerForMap = useMemo(() => ({ lat: fire.lat, lng: fire.lng }), [fire.lat, fire.lng]);
 
   const claim = () => {
+    // Gate by volunteer profile completion
+    if (volCompleted === false) {
+      setPendingAction('claim');
+      setVolModalOpen(true);
+      return;
+    }
     const fd = new FormData();
     fd.set("fireId", String(fire.id));
     startTransition(async () => {
-      const res = await claimAction(fd);
-      if (res?.ok) {
-        setViewer("requested");
-        setRequested((prev) => [
-          ...prev,
-          { id: -1, userId: -1, status: "requested", createdAt: new Date().toISOString(), name: null, email: "Вие" },
-        ]);
+      try {
+        // Prefer API to avoid server action header issues
+        const r = await fetch(`/api/fires/${fire.id}/claim`, { method: 'POST' });
+        const res = await r.json().catch(() => ({}));
+        if (r.ok && res?.ok) {
+          setViewer("requested");
+          setRequested((prev) => [
+            ...prev,
+            { id: -1, userId: -1, status: "requested", createdAt: new Date().toISOString(), name: null, email: "Вие" },
+          ]);
+        } else {
+          setPendingAction('claim');
+          setVolModalOpen(true);
+        }
+      } catch (e) {
+        // Ensure UI stays stable on server-action rejection
+        setPendingAction('claim');
+        setVolModalOpen(true);
       }
     });
   };
@@ -670,6 +702,39 @@ export default function FireDetailsClient({
           </div>
         </DialogContent>
       </Dialog>
+      <VolunteerModal
+        open={volModalOpen}
+        onOpenChange={(v) => {
+          setVolModalOpen(v);
+          if (!v) {
+            (async () => {
+              try {
+                const r = await fetch('/api/me/volunteer-profile', { cache: 'no-store' });
+                const j = await r.json();
+                const completed = !!j?.completed;
+                setVolCompleted(completed);
+              } catch {}
+            })();
+          }
+        }}
+        afterSave={async () => {
+          setVolCompleted(true);
+          if (pendingAction === 'claim') {
+            setPendingAction(null);
+            try {
+              const r = await fetch(`/api/fires/${fire.id}/claim`, { method: 'POST' });
+              const res = await r.json().catch(() => ({}));
+              if (r.ok && res?.ok) {
+                setViewer('requested');
+                setRequested((prev) => [
+                  ...prev,
+                  { id: -1, userId: -1, status: 'requested', createdAt: new Date().toISOString(), name: null, email: 'Вие' },
+                ]);
+              }
+            } catch {}
+          }
+        }}
+      />
     </div>
   );
 }

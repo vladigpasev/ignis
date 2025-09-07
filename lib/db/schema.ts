@@ -74,6 +74,33 @@ export const users = pgTable(
   }),
 );
 
+// ---------- VOLUNTEER PROFILES ----------
+export const volunteerProfiles = pgTable(
+  'volunteer_profiles',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    phone: varchar('phone', { length: 32 }),
+    city: varchar('city', { length: 255 }),
+    lat: doublePrecision('lat'),
+    lng: doublePrecision('lng'),
+    bio: text('bio'),
+    motivation: text('motivation'),
+    skills: jsonb('skills'), // array of strings
+    transport: jsonb('transport'), // { car?: boolean, suv4x4?: boolean, truck?: boolean, motorcycle?: boolean }
+    availability: varchar('availability', { length: 64 }), // 'weekdays' | 'weekends' | 'evenings' | 'anytime'
+    firstAid: integer('first_aid'), // 1/0
+    agreeContact: integer('agree_contact'), // 1/0
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (t) => ({
+    userUnique: uniqueIndex('volunteer_profiles_user_unique').on(t.userId),
+    userIdx: index('volunteer_profiles_user_idx').on(t.userId),
+  })
+);
+
 export const sessions = pgTable(
   'sessions',
   {

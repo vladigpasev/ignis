@@ -37,16 +37,20 @@ export default function FireList({
   fires,
   onFocus,
   title = "Докладвани пожари",
+  showTitle = true,
+  showFocusButton = true,
 }: {
   fires: FireListItem[];
   onFocus?: (f: FireListItem) => void;
   title?: string;
+  showTitle?: boolean;
+  showFocusButton?: boolean;
 }) {
   const map = useContext(MapContext)?.map ?? null;
 
   return (
     <div className="max-w-5xl mx-auto w-full px-4 pb-10">
-      <h2 className="text-xl font-semibold mb-3">{title}</h2>
+      {showTitle && <h2 className="text-xl font-semibold mb-3">{title}</h2>}
       <div className="grid gap-3 sm:grid-cols-2">
         {fires.map((f) => (
           <Card key={f.id} className="overflow-hidden">
@@ -74,18 +78,20 @@ export default function FireList({
                 )}
               </div>
               <div className="mt-3 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (map) {
-                      map.flyTo({ center: [f.lng, f.lat], zoom: 14, speed: 1.2 });
-                    }
-                    onFocus?.(f);
-                  }}
-                >
-                  Фокусирай на картата
-                </Button>
+                {showFocusButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (map) {
+                        map.flyTo({ center: [f.lng, f.lat], zoom: 14, speed: 1.2 });
+                      }
+                      onFocus?.(f);
+                    }}
+                  >
+                    Фокусирай на картата
+                  </Button>
+                )}
                 <Link href={`/fires/${f.id}`}>
                   <Button size="sm">Детайли</Button>
                 </Link>

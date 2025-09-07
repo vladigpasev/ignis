@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { fires, type Fire, users, fireVolunteers } from "@/lib/db/schema";
+import { fires, type Fire, users, fireVolunteers, volunteerProfiles } from "@/lib/db/schema";
 import { auth0 } from "@/lib/auth0";
 import { eq, desc } from "drizzle-orm";
 import { haversineMeters } from "@/lib/geo";
@@ -69,6 +69,17 @@ export async function POST(req: Request) {
     let [local] = await db.select().from(users).where(eq(users.email, user.email)).limit(1);
     if (!local) {
       [local] = await db.insert(users).values({ email: user.email, name: user.name ?? null }).returning();
+    }
+
+    // Gate by volunteer profile completion
+    const vp = await db
+      .select({ c: volunteerProfiles.completedAt })
+      .from(volunteerProfiles)
+      .where(eq(volunteerProfiles.userId, local.id))
+      .limit(1);
+    const completed = vp.length > 0 && !!vp[0].c;
+    if (!completed) {
+      return NextResponse.json({ ok: false, error: "Моля, попълнете профила си на доброволец преди да създадете пожар." }, { status: 403 });
     }
 
     const [created] = await db

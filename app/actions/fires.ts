@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { fires, users, fireVolunteers, fireJoinTokens, fireJoinTokenUses, fireDeactivationVotes, type Fire } from "@/lib/db/schema";
+import { fires, users, fireVolunteers, fireJoinTokens, fireJoinTokenUses, fireDeactivationVotes, volunteerProfiles, type Fire } from "@/lib/db/schema";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { auth0 } from "@/lib/auth0";
 import crypto from "crypto";
@@ -50,6 +50,16 @@ async function ensureSendbirdJoined(fireId: number, userId: number) {
   } catch (e: any) {
     console.warn("[sendbird] auto-join failed", fireId, userId, e?.message);
   }
+}
+
+async function requireVolunteerProfileCompleted(userId: number) {
+  const row = await db
+    .select({ completedAt: volunteerProfiles.completedAt })
+    .from(volunteerProfiles)
+    .where(eq(volunteerProfiles.userId, userId))
+    .limit(1);
+  const ok = row.length > 0 && !!row[0].completedAt;
+  if (!ok) throw new Error("ProfileIncomplete");
 }
 
 // ----- Activity helpers -----
@@ -184,6 +194,9 @@ export async function myVolunteerStatus(fireId: number): Promise<"none" | "reque
 export async function createFire(form: FormData) {
   const { local } = await ensureLocalUser();
 
+  // Gate by volunteer profile completion before creating a fire
+  await requireVolunteerProfileCompleted(local.id);
+
   const lat = Number(form.get("lat"));
   const lng = Number(form.get("lng"));
   const radiusM = Math.round(Number(form.get("radiusM")));
@@ -240,6 +253,16 @@ export async function claimVolunteer(form: FormData) {
   const fireId = Number(form.get("fireId"));
   if (!Number.isFinite(fireId)) throw new Error("Invalid fireId");
 
+  // Gate by volunteer profile completion
+  try {
+    await requireVolunteerProfileCompleted(local.id);
+  } catch (e: any) {
+    if (e?.message === 'ProfileIncomplete') {
+      return { ok: false, error: 'ProfileIncomplete' } as const;
+    }
+    throw e;
+  }
+
   const existing = await db
     .select()
     .from(fireVolunteers)
@@ -255,7 +278,7 @@ export async function claimVolunteer(form: FormData) {
   await touchFireActivity(fireId);
 
   revalidatePath(`/fires/${fireId}`);
-  return { ok: true };
+  return { ok: true } as const;
 }
 
 // ----- Approve another user (make confirmed) -----
@@ -320,6 +343,16 @@ export async function joinWithToken(fireId: number, token: string) {
   if (!token || !Number.isFinite(fireId)) return { ok: false, error: "Invalid token." };
 
   const { local } = await ensureLocalUser();
+
+  // Gate by volunteer profile completion
+  try {
+    await requireVolunteerProfileCompleted(local.id);
+  } catch (e: any) {
+    if (e?.message === 'ProfileIncomplete') {
+      return { ok: false, error: "Моля, попълни профила на доброволец преди да се присъединиш." };
+    }
+    throw e;
+  }
 
   const now = new Date();
   const rows = await db
