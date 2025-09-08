@@ -8,9 +8,18 @@ const nextConfig: NextConfig = {
   // Using a single array returns "afterFiles" rewrites, so existing static files
   // (like /img/logo.svg) are served directly from the CDN with zero compute.
   async rewrites() {
-    return [
-      { source: "/:path*", destination: "/maintenance.html" },
-    ];
+    return {
+      // Intercept everything before filesystem/dynamic routes so the app never runs.
+      beforeFiles: [
+        // Allow the maintenance asset itself and the logo.
+        { source: "/maintenance.html", destination: "/maintenance.html" },
+        { source: "/img/logo.svg", destination: "/img/logo.svg" },
+        // Everything else -> maintenance
+        { source: "/:path*", destination: "/maintenance.html" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 
   // Apply strict security headers and noindex globally.
