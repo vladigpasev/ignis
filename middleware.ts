@@ -1,7 +1,13 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 // Global maintenance mode: block all routes and return a static page.
-export async function middleware(_request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  // Allow the real logo asset while blocking everything else.
+  if (pathname === "/img/logo.svg") {
+    return NextResponse.next();
+  }
   const html = `<!doctype html>
   <html lang="bg">
     <head>
@@ -92,15 +98,14 @@ export async function middleware(_request: NextRequest) {
           margin: 0 auto 14px;
         }
 
-        .brand {
-          display: inline-flex; align-items: center; gap: 12px; margin-bottom: 8px;
-        }
-        .glyph {
-          width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center;
-          background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 18%, #fff), color-mix(in oklab, var(--primary) 36%, #fff));
+        .brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .logo {
+          width: 48px; height: 48px; border-radius: 12px;
           box-shadow: 0 10px 30px rgba(2, 8, 23, 0.25);
+          overflow: hidden; display: grid; place-items: center;
+          background: color-mix(in oklab, var(--card) 80%, var(--primary));
         }
-        .brand-name { font-weight: 800; font-size: clamp(18px, 3vw, 22px); letter-spacing: .3px; }
+        .brand-name { font-weight: 800; font-size: clamp(18px, 3vw, 22px); letter-spacing: .3px; color: var(--card-foreground); }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
         h1 {
@@ -146,16 +151,8 @@ export async function middleware(_request: NextRequest) {
         <main class="card" role="main" aria-label="Сайтът е в режим на поддръжка" aria-live="polite">
           <div class="badge" aria-hidden="true">⚙️ Планирана поддръжка</div>
           <div class="brand">
-            <div class="glyph" aria-hidden="true">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="g" x1="0" y1="0" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-                    <stop offset="0" stop-color="#FFD1B8" />
-                    <stop offset="1" stop-color="#DD6630" />
-                  </linearGradient>
-                </defs>
-                <path d="M12 2c1.8 2.3 2.3 4.4 1.2 6.2-1.1 1.8-3.1 2.5-5.3 3.7-2.2 1.2-3.4 3.4-2.7 5.7C6 20.9 8.1 22 10.5 22c3.3 0 6-2.7 6-6 0-2.2-.7-3.7-1.6-4.9-.9-1.2-1.5-2.1-.6-3.8.9-1.7 3.2-2.1 4-1.6C17.5 3 15.1 2 12 2Z" fill="url(#g)"/>
-              </svg>
+            <div class="logo" aria-hidden="true">
+              <img src="/img/logo.svg" alt="FireLinks" width="44" height="44" decoding="async" loading="eager" style="display:block;width:44px;height:44px" />
             </div>
             <div class="brand-name">FireLinks<span class="sr-only"> – режим на поддръжка</span></div>
           </div>
